@@ -1,5 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 def add_vector_after_position(matrix, vector, position_ids, after=None):
