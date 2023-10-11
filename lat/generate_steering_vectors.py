@@ -10,11 +10,12 @@ from lat.data import ComparisonDataset
 load_dotenv()
 token = os.getenv("HF_TOKEN")
 system_prompt = "You are a helpful, honest and concise assistant."
-data_path = "refusal_data_A_B.json"
+data_path = "datasets/refusal/refusal_data_A_B.json"
+jailbreaks_path = "datasets/refusal/jailbreaks.json"
 
 
 def generate_and_save_steering_vectors(
-    model, dataset, start_layer=0, end_layer=32, token_idx=-2
+    model, dataset, output_folder, start_layer=0, end_layer=32, token_idx=-2
 ):
     layers = list(range(start_layer, end_layer + 1))
     positive_activations = dict([(layer, []) for layer in layers])
@@ -40,18 +41,30 @@ def generate_and_save_steering_vectors(
         positive = torch.stack(positive_activations[layer])
         negative = torch.stack(negative_activations[layer])
         vec = (positive - negative).mean(dim=0)
-        torch.save(vec, f"vec_layer_{layer}.pt")
-        torch.save(positive, f"positive_layer_{layer}.pt")
+        torch.save(vec, f"{output_folder}/vec_layer_{layer}.pt")
+        torch.save(positive, f"{output_folder}/positive_layer_{layer}.pt")
         torch.save(
             negative,
-            f"negative_layer_{layer}.pt",
+            f"{output_folder}/negative_layer_{layer}.pt",
         )
 
 
 if __name__ == "__main__":
     model = Llama7BChatHelper(token, system_prompt)
-    data = []
     with open(data_path, "r") as f:
         data = json.load(f)
     dataset = ComparisonDataset(data, system_prompt)
-    generate_and_save_steering_vectors(model, dataset)
+    output_folder_name = "vanilla_steering"
+    os.makedirs(output_folder_name, exist_ok=True)
+    generate_and_save_steering_vectors(model, dataset, output_folder=output_folder_name)
+    with open(jailbreaks_path, "r") as f:
+        jailbreaks = json.load(f)
+    for jailbreak in jailbreaks:
+        jailbreak_name = jailbreak["name"]
+        jailbreak_prompt = jailbreak["prompt"]
+        jailbreak_dataset = ComparisonDataset(data, system_prompt, jailbreak_prompt)
+        output_folder_name = f"{jailbreak_name}_steering"
+        os.makedirs(output_folder_name, exist_ok=True)
+        generate_and_save_steering_vectors(
+            model, jailbreak_dataset, output_folder=output_folder_name
+        )
