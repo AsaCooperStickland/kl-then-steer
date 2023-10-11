@@ -1,0 +1,2 @@
+datasets/refusal/training/* filter=lfs diff=lfs merge=lfs -text
+datasets/refusal/training/** filter=lfs diff=lfs merge=lfs -text
