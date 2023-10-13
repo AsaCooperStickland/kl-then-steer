@@ -12,7 +12,7 @@ token = os.getenv("HF_TOKEN")
 def prompt_to_tokens(tokenizer, system_prompt, instruction, model_output, prompt_beginning):
     B_INST, E_INST = "[INST]", "[/INST]"
     B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    dialog_content = B_SYS + system_prompt + E_SYS + prompt_beginning, instruction.strip()
+    dialog_content = B_SYS + system_prompt + E_SYS + prompt_beginning + instruction.strip()
     dialog_tokens = tokenizer.encode(
         f"{B_INST} {dialog_content.strip()} {E_INST} {model_output.strip()}"
     )
