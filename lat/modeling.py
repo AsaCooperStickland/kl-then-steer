@@ -4,12 +4,35 @@ from matplotlib.ticker import ScalarFormatter
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
+# def add_vector_after_position(matrix, vector, position_ids, after=None):
+#     after_id = after
+#     if after_id is None:
+#         after_id = position_ids.min().item() - 1
+#     mask = position_ids > after_id
+#     mask = mask.unsqueeze(-1)
+#     matrix += mask.float() * vector
+#     return matrix
+
 def add_vector_after_position(matrix, vector, position_ids, after=None):
-    after_id = after
-    if after_id is None:
-        after_id = position_ids.min().item() - 1
-    mask = position_ids > after_id
-    mask = mask.unsqueeze(-1)
+    # Get the matrix shape and broadcast dimensions
+    batch_size, seq_len, _ = matrix.size()
+
+    # If after is None, create a default tensor with values smaller than min of position_ids
+    if after is None:
+        after_val = position_ids.min().item() - 1
+        after = torch.full((batch_size, seq_len), after_val).to(position_ids.device)
+
+    # Convert after to tensor if it's a list
+    elif isinstance(after, list):
+        after = torch.tensor(after).to(position_ids.device).unsqueeze(-1)
+        after = after.expand(batch_size, seq_len)
+
+    else:
+        after = torch.full((batch_size, seq_len), after).to(position_ids.device)
+
+    # Check if each position in position_ids is greater than the corresponding value in after
+    mask = position_ids > after
+    mask = mask.unsqueeze(-1).expand_as(matrix)
     matrix += mask.float() * vector
     return matrix
 
@@ -118,12 +141,18 @@ class BlockOutputWrapper(torch.nn.Module):
 
 
 class Llama7BChatHelper:
-    def __init__(self, token, system_prompt):
+    def __init__(self, token, system_prompt, generation=False):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.system_prompt = system_prompt
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token
-        )
+        if generation:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, padding_side="left"
+            )
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token,
+            )
         self.model = AutoModelForCausalLM.from_pretrained(
             "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token
         ).to(self.device)
@@ -143,26 +172,35 @@ class Llama7BChatHelper:
         for layer in self.model.model.layers:
             layer.after_position = pos
 
-    def prompt_to_tokens(self, instruction):
+    def prompt_format(self, instruction):
         B_INST, E_INST = "[INST]", "[/INST]"
         B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
         dialog_content = B_SYS + self.system_prompt + E_SYS + instruction.strip()
-        dialog_tokens = self.tokenizer.encode(
-            f"{B_INST} {dialog_content.strip()} {E_INST}"
-        )
-        return torch.tensor(dialog_tokens).unsqueeze(0)
+        dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+        return dialog_content
 
-    def generate_text(self, prompt, max_new_tokens=50):
-        tokens = self.prompt_to_tokens(prompt).to(self.device)
+    def tokenize_prompt(self, prompt):
+        dialog_tokens = self.tokenizer(prompt, padding=True, return_tensors="pt"
+        )
+        return dialog_tokens
+
+    def generate_text(self, prompts, max_new_tokens=50):
+        if type(prompts) == str:
+            prompts = [prompts]
+        prompts = [self.prompt_format(prompt) for prompt in prompts]
+        tokens = self.tokenize_prompt(prompts).to(self.device)
         return self.generate(tokens, max_new_tokens=max_new_tokens)
 
     def generate(self, tokens, max_new_tokens=50):
-        instr_pos = find_instruction_end_postion(tokens[0], self.END_STR)
+        instr_pos = [find_instruction_end_postion(tokens.input_ids[i], self.END_STR) for i in range(len(tokens.input_ids))]
         self.set_after_positions(instr_pos)
         generated = self.model.generate(
-            inputs=tokens, max_new_tokens=max_new_tokens, top_k=1
+            **tokens, max_new_tokens=max_new_tokens, top_k=1
         )
-        return self.tokenizer.batch_decode(generated)[0]
+        if len(generated) > 1:
+            return self.tokenizer.batch_decode(generated)
+        else:
+            return self.tokenizer.batch_decode(generated)[0]
 
     def get_logits(self, tokens):
         with torch.no_grad():
