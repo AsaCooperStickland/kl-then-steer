@@ -21,7 +21,7 @@ file_path = 'datasets/refusal/questions.jsonl'
 with jsonlines.open(file_path) as reader:
     for item in reader:
         if 'question' in item:
-            QUESTIONS.append(item['question'])
+            QUESTIONS.append(item)
 
 
 def get_vec(directory, layer):
@@ -67,12 +67,15 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
                 batched_questions = questions[i: max(i + batch_size, len(questions))]
                 generated_texts = model.generate_text(batched_questions, max_new_tokens=max_new_tokens)
                 
-                for q, text in zip(batched_questions, generated_texts):
+                for question, text in zip(batched_questions, generated_texts):
+                    q = question["question"]
+                    c = question["category"]
                     text = text.split("[/INST]")[-1].strip()
                     print(f"Question: {q}")
+                    print(f"Category: {c}")
                     print(f"Answer: {text}")
                     print(f"Settings: layer {layer}, multiplier {multiplier}, directory {directory}, question_type {question_type}")
-                    answers.append({"question": q, "answer": text})
+                    answers.append({"question": q, "answer": text, "category": c})
     
             layer_results.append({"multiplier": multiplier, "answers": answers})
         all_results.append({"layer": layer, "results": layer_results})
