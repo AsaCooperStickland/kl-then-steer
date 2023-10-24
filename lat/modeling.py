@@ -52,11 +52,38 @@ def find_instruction_end_postion(tokens, end_str):
     return end_pos + len(end_str) - 1
 
 
+class LinearWrapper(torch.nn.Module):
+    
+    def __init__(self, proj):
+        super().__init__()
+        self.proj = proj
+        self.activations = None
+        self.add_activations = None
+
+    def forward(self, *args, **kwargs):
+        output = self.proj(*args, **kwargs)
+        self.activations = output.clone()
+        if self.add_activations is not None:
+            # output[:, -1, :] = output[:, -1, :] + self.add_activations.reshape(1, 1, -1)
+            output += self.add_activations
+        return output
+    
+    def reset(self):
+        self.activations = None
+        self.add_activations = None
+        
+    def add(self, activations):
+        self.add_activations = activations
+
+
 class AttnWrapper(torch.nn.Module):
+    
     def __init__(self, attn):
         super().__init__()
         self.attn = attn
         self.activations = None
+        self.attn.q_proj = LinearWrapper(self.attn.q_proj)
+        self.attn.v_proj = LinearWrapper(self.attn.v_proj)
 
     def forward(self, *args, **kwargs):
         output = self.attn(*args, **kwargs)
@@ -132,6 +159,10 @@ class BlockOutputWrapper(torch.nn.Module):
         self.add_activations = activations
 
     def reset(self):
+        self.block.self_attn.activations = None
+        self.block.self_attn.attn.q_proj.reset()
+        self.block.self_attn.attn.v_proj.reset()
+
         self.add_activations = None
         self.activations = None
         self.block.self_attn.activations = None
@@ -139,6 +170,18 @@ class BlockOutputWrapper(torch.nn.Module):
         self.calc_dot_product_with = None
         self.dot_products = []
 
+    def get_query_activations(self):
+        return self.block.self_attn.attn.q_proj.activations
+    
+    def get_value_activations(self):
+        return self.block.self_attn.attn.v_proj.activations
+    
+    def add_query_activations(self, activations):
+        self.block.self_attn.attn.q_proj.add(activations)
+    
+    def add_value_activations(self, activations):
+        self.block.self_attn.attn.v_proj.add(activations)
+        
 
 class Llama7BChatHelper:
     def __init__(self, token, system_prompt, generation=False):
@@ -212,6 +255,26 @@ class Llama7BChatHelper:
 
     def set_add_activations(self, layer, activations):
         self.model.model.layers[layer].add(activations)
+
+    def get_last_query_activations(self, layer):
+        return self.model.model.layers[layer].get_query_activations()
+
+    def set_add_query_activations(self, layer, activations):
+        self.model.model.layers[layer].add_query_activations(activations)
+        
+    def get_last_value_activations(self, layer):
+        return self.model.model.layers[layer].get_value_activations()
+
+    def set_add_value_activations(self, layer, activations):
+        self.model.model.layers[layer].add_value_activations(activations)
+
+    def reset_all(self):
+        for layer in self.model.model.layers:
+            layer.reset()
+
+    def print_decoded_activations(self, decoded_activations, label, topk=10):
+        data = self.get_activation_data(decoded_activations, topk)[0]
+        print(label, data)
 
     def set_calc_dot_product_with(self, layer, vector):
         self.model.model.layers[layer].calc_dot_product_with = vector
