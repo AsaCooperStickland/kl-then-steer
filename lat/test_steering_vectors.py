@@ -15,7 +15,7 @@ token = os.getenv("HF_TOKEN")
 system_prompt = "You are a helpful, honest and concise assistant."
 QUESTIONS = []
 
-file_path = 'datasets/refusal/questions.jsonl'
+file_path = 'datasets/refusal/filtered_questions.jsonl'
 
 # Open the JSONL file and extract questions.
 with jsonlines.open(file_path) as reader:
@@ -24,8 +24,8 @@ with jsonlines.open(file_path) as reader:
             QUESTIONS.append(item)
 
 
-def get_vec(directory, layer):
-    return torch.load(f"{directory}/vec_layer_{layer}.pt")
+def get_vec(directory, layer, vec_type=""):
+    return torch.load(f"{directory}/vec{vec_type}_layer_{layer}.pt")
 
 
 def generate_with_vector(model, questions, directory, saved_vector, example=None, question_type=""):
@@ -45,37 +45,49 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
     all_results = []
 
     batch_size = 16
+    vec_type2name = {"": "activations", "_value": "value", "_query": "query", "n/a": "n/a"}
+    if "vanilla" in question_type:
+        vec_types = ["n/a"]
+    else:
+        vec_types = ["", "_value", "_query"]
     
     for layer in layers:
         layer_results = []
         # for multiplier in tqdm(multipliers):
         for multiplier in multipliers:
-            answers = []
-            model.reset_all()
-            if saved_vector:
-                vec = get_vec(directory, layer)
-            elif "vanilla" in question_type:
-                vec = None
-            else:
-                vec = activations[layer]
-            if vec is not None:
-                model.set_add_activations(layer, multiplier * vec.cuda())
-    
-            # Batch questions
-            for i in range(0, len(questions), batch_size):
-                # batch, and handle the case where we have less than batch_size questions
-                batched_questions = questions[i: max(i + batch_size, len(questions))]
-                generated_texts = model.generate_text(batched_questions, max_new_tokens=max_new_tokens)
-                
-                for question, text in zip(batched_questions, generated_texts):
-                    q = question["question"]
-                    c = question["category"]
-                    text = text.split("[/INST]")[-1].strip()
-                    print(f"Question: {q}")
-                    print(f"Category: {c}")
-                    print(f"Answer: {text}")
-                    print(f"Settings: layer {layer}, multiplier {multiplier}, directory {directory}, question_type {question_type}")
-                    answers.append({"question": q, "answer": text, "category": c})
+            for vec_type in vec_types:
+                vec_name = vec_type2name[vec_type]
+                answers = []
+                model.reset_all()
+                if saved_vector:
+                    vec = get_vec(directory, layer, vec_type)
+                elif "vanilla" in question_type:
+                    vec = None
+                else:
+                    vec = activations[layer]
+                if vec is not None:
+                    if vec_type == "_value":
+                        model.set_add_value_activations(layer, multiplier * vec.cuda())
+                    elif vec_type == "_query":
+                        model.set_add_query_activations(layer, multiplier * vec.cuda())
+                    else:
+                        model.set_add_activations(layer, multiplier * vec.cuda())
+        
+                # Batch questions
+                for i in range(0, len(questions), batch_size):
+                    # batch, and handle the case where we have less than batch_size questions
+                    batched_questions = questions[i: max(i + batch_size, len(questions))]
+                    generated_texts = model.generate_text(batched_questions, max_new_tokens=max_new_tokens)
+                    
+                    for question, text in zip(batched_questions, generated_texts):
+                        q = question["question"]
+                        c = question["category"]
+                        text = text.split("[/INST]")[-1].strip()
+                        print(f"Question: {q}")
+                        print(f"Category: {c}")
+                        print(f"Answer: {text}")
+                        print(f"Settings: layer {layer}, multiplier {multiplier}, directory {directory}, question_type {question_type}")
+                        answers.append({"question": q, "answer": text, "category": c, "vec_name": vec_name})
     
             layer_results.append({"multiplier": multiplier, "answers": answers})
         all_results.append({"layer": layer, "results": layer_results})
