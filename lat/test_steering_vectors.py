@@ -55,9 +55,9 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
         layer_results = []
         # for multiplier in tqdm(multipliers):
         for multiplier in multipliers:
+            answers = []
             for vec_type in vec_types:
                 vec_name = vec_type2name[vec_type]
-                answers = []
                 model.reset_all()
                 if saved_vector:
                     vec = get_vec(directory, layer, vec_type)
@@ -76,18 +76,17 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
                 # Batch questions
                 for i in range(0, len(questions), batch_size):
                     # batch, and handle the case where we have less than batch_size questions
-                    batched_questions = questions[i: max(i + batch_size, len(questions))]
+                    batched_questions = [q["question"] for q in questions[i: min(i + batch_size, len(questions))]]
+                    batched_categories = [q["category"] for q in questions[i: min(i + batch_size, len(questions))]]
                     generated_texts = model.generate_text(batched_questions, max_new_tokens=max_new_tokens)
                     
-                    for question, text in zip(batched_questions, generated_texts):
-                        q = question["question"]
-                        c = question["category"]
+                    for question, category, text in zip(batched_questions, batched_categories, generated_texts):
                         text = text.split("[/INST]")[-1].strip()
-                        print(f"Question: {q}")
-                        print(f"Category: {c}")
+                        print(f"Question: {question}")
+                        print(f"Category: {category}")
                         print(f"Answer: {text}")
                         print(f"Settings: layer {layer}, multiplier {multiplier}, directory {directory}, question_type {question_type}")
-                        answers.append({"question": q, "answer": text, "category": c, "vec_name": vec_name})
+                        answers.append({"question": question, "answer": text, "category": category, "vec_name": vec_name})
     
             layer_results.append({"multiplier": multiplier, "answers": answers})
         all_results.append({"layer": layer, "results": layer_results})
@@ -101,16 +100,16 @@ if __name__ == "__main__":
     model = Llama7BChatHelper(token, system_prompt, generation=True)
     output_folder_name = "vanilla_steering"
     os.makedirs(output_folder_name, exist_ok=True)
-    generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=True)
-    generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=False, question_type="vanilla_")
+    # generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=True)
+    # generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=False, question_type="vanilla_")
     with open(data_path, "r") as f:
         data = json.load(f)
     dataset = ComparisonDataset(data, system_prompt)
-    for i in range(10):
-        example = dataset[i]
-        output_folder_name = f"example{i}_steering"
-        os.makedirs(output_folder_name, exist_ok=True)
-        generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=False, example=example)
+    # for i in range(10):
+    #     example = dataset[i]
+    #     output_folder_name = f"example{i}_steering"
+    #     os.makedirs(output_folder_name, exist_ok=True)
+    #     generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=False, example=example)
 
     with open(jailbreaks_path, "r") as f:
         jailbreaks = json.load(f)
@@ -118,7 +117,9 @@ if __name__ == "__main__":
         jailbreak_name = jailbreak["name"]
         print(f"Generating for {jailbreak_name}")
         jailbreak_prompt = jailbreak["prompt"]
-        jailbreak_questions = [jailbreak_prompt + q for q in QUESTIONS]
+        jailbreak_questions = []
+        for question in QUESTIONS:
+            jailbreak_questions.append({"question": jailbreak_prompt + question["question"], "category": question["category"]})
         
         output_folder_name = "vanilla_steering"
         generate_with_vector(model, jailbreak_questions, output_folder_name, 
