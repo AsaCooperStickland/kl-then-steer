@@ -38,13 +38,17 @@ def extract_score(classification_str):
     return None  # or return 0 or any default value
 
 
-# load pickled cache if it exists
-if os.path.exists('cache.pkl'):
-    with open('cache.pkl', 'rb') as f:
-        CACHE = pickle.load(f)
-else:
+evaluate = False
+if evaluate:
+    # load pickled cache if it exists
+    if os.path.exists('cache.pkl'):
+        with open('cache.pkl', 'rb') as f:
+            CACHE = pickle.load(f)
+    else:
     # Global cache for model responses
-    CACHE = defaultdict(dict)
+        CACHE = defaultdict(dict)
+else:
+    CACHE = None
 
 def batch_prompts(prompts, batch_size=5):
     """Batches prompts."""
@@ -156,6 +160,8 @@ def chat_batch_generate(
         return response
 
     answers = []
+    if len(messages) == 1:
+        return [api_call(messages[0])]
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_threads) as executor:
         for response in executor.map(api_call, messages):
             answers.append(response)
@@ -214,6 +220,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
                     "question": ans["question"],
                     "answer": ans["answer"],
                     "category": ans["category"],
+                    "vec_type": ans["vec_name"],
                     "model_output": classification_output,
                     "score": score,
                 }
@@ -226,30 +233,75 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
     return categorized_data
 
 
-def get_average_score_per_layer_per_multiplier(categorized_data):
+def get_average_scores_json(categorized_data):
     """Gets the average score per layer per multiplier."""
     average_scores = {}
     for layer_key, layer_data in categorized_data.items():
         average_scores[layer_key] = {}
         for multiplier_key, multiplier_data in layer_data.items():
-            scores = [entry["score"] for entry in multiplier_data if entry["score"] != -1]
-            average_scores[layer_key][multiplier_key] = sum(scores) / len(scores)
+            scores = [entry for entry in multiplier_data if entry["score"] != -1]
+            average_scores[layer_key][multiplier_key] = {}
+            for vec_name in ["activations", "query", "value", "n/a"]:
+                average_scores[layer_key][multiplier_key][vec_name] = {}
+                # print(scores[0])
+                # print(scores[0]["vec_type"])
+                # print(vec_name == scores[0]["vec_type"])
+                vec_scores = [entry["score"] for entry in scores if entry["vec_type"] == vec_name]
+                # print(vec_scores)
+                if len(vec_scores) > 0:
+                    average_scores[layer_key][multiplier_key][vec_name]["average"] = sum(vec_scores) / len(vec_scores)
+                category_list = set([entry["category"] for entry in scores if entry["vec_type"] == vec_name])
+                for category in category_list:
+                    category_scores = [entry["score"] for entry in scores if entry["vec_type"] == vec_name and entry["category"] == category]
+                    if len(category_scores) > 0:
+                        average_scores[layer_key][multiplier_key][vec_name][category] = sum(category_scores) / len(category_scores)
     return average_scores
-    
+
+
+def get_csv_from_json_scores(average_scores, print_header=True):
+    """Gets a CSV from the average scores. Separate out different categories"""
+    category_list = ["average", "nationality_bias", "race_bias", "gender_bias", "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
+    if print_header:
+        # csv = ", , average, , , nationality_bias, , ,race_bias,,,gender_bias,,,political_bias,,,illegal_activity,,,capability,,,human_only,,,power_seeking,,,\n"
+        csv = ", ,"
+        for category in category_list:
+            csv += f"{category},,,"
+        csv += "\n"
+        csv += "Layer,Multiplier,Activations,Query,Value,Activations,Query,Value\n"
+    else:
+        csv = ""
+    for layer_key, layer_data in average_scores.items():
+        for multiplier_key, multiplier_data in layer_data.items():
+            csv += f"{layer_key},{multiplier_key},"
+            for category in category_list:
+                for vec_name in ["activations", "query", "value"]:
+                    if "n/a" in multiplier_data:
+                        if category in multiplier_data['n/a']:
+                            csv += f"{multiplier_data['n/a'][category]},,,"
+                            break
+                    csv += f"{multiplier_data[vec_name][category]},"
+            csv += "\n"
+    return csv
 
 
 directory = "vanilla_steering"
-question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"]
+question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"] #"4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
 # question_types = ["vanilla_"]
-for question_type in question_types:
+for i, question_type in enumerate(question_types):
     results = json.load(open(f"{directory}/{question_type}results.json", "r"))
     with open("lat/evaluation_prompt.txt", "r") as f:
         classifier_prompt = f.read()
     model_name = "gpt-3.5-turbo-16k-0613"
     call_type = "sample" # or "logprobs"
-    categorized_results = categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type)
-    average_scores = get_average_score_per_layer_per_multiplier(categorized_results)
-    print(average_scores)
+    if evaluate:
+        categorized_results = categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type)
+    else:
+        with open(f"{directory}_{question_type}categorized_results.json", "r") as f:
+            categorized_results = json.load(f)
+    average_scores = get_average_scores_json(categorized_results)
+    # print(average_scores, "average scores")
+    csv_scores = get_csv_from_json_scores(average_scores, print_header=i == 0)
+    print(csv_scores)
     
 # save cache
 with open('cache.pkl', 'wb') as f:
