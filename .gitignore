@@ -1,3 +1,11 @@
+**/results/
+**/obsolete/
+**/wandb/
+
+.vscode/
+finetuning/helper_for_samples.py
+lat/test_steering_vectors.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

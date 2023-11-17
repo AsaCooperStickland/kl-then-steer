@@ -1,0 +1,82 @@
+[
+    {
+        "instruction": "What are the three primary colors?",
+        "input": "",
+        "output": "The three primary colors are red, blue, and yellow."
+    },
+    {
+      "instruction": "Arrange the items given below in the order to complete the following sentence",
+      "input": "cake, me, eating",
+      "output": "Me eating cake."
+    },
+    {
+        "instruction": "Identify the odd one out.",
+        "input": "Twitter, Instagram, Telegram",
+        "output": "Telegram"
+    },
+    {
+        "instruction": "Translate the word 'happiness' into Spanish.",
+        "input": "",
+        "output": "The Spanish word for 'happiness' is 'felicidad'."
+    },
+    {
+      "instruction": "Change the following sentence from first-person to second-person: \"I am afraid of the unknown.\"",
+      "input": "",
+      "output": "You are afraid of the unknown."
+    },
+    {
+      "instruction": "Describe what the color blue evokes in people.",
+      "input": "",
+      "output": "The color blue often evokes feelings of calmness, serenity, and peace in people. It is commonly associated with the sky and the ocean, which are vast and expansive, giving the color a sense of depth and stability. Blue can also represent trust, loyalty, and intelligence, being a popular color for branding purposes for financial and technological companies. In some cultures, blue is seen as protective and can symbolize heaven, purity and spirituality. However, blue can also evoke feelings of sadness or melancholy, as in the phrase \"feeling blue\". Overall, the color blue has a range of emotions and connotations, depending largely on its context and cultural associations."
+    },
+    {
+      "instruction": "List at least 5 books that deal with AI concepts.",
+      "input": "",
+      "output": "1. \"Superintelligence: Paths, Dangers, Strategies\" by Nick Bostrom\n2. \"Life 3.0: Being Human in the Age of Artificial Intelligence\" by Max Tegmark\n3. \"The Hundred-Page Machine Learning Book\" by Andriy Burkov \n4. \"Artificial Intelligence with Python\" by Prateek Joshi\n5. \"Human Compatible: Artificial Intelligence and the Problem of Control\" by Stuart Russell."
+    },
+    {
+      "instruction": "Reword the following sentence so that it has the same meaning: \"He was the only one to do it.\"",
+      "input": "",
+      "output": "He alone did it."
+    },
+    {
+      "instruction": "Construct a flow chart to describe the process of making French toast.",
+      "input": "",
+      "output": "Start\n\n[1] Gather Ingredients\n- Bread (8 slices)\n- Milk (1/2 cup) \n- Eggs (4 large)\n- Sugar (2 tablespoons)\n- Cinnamon (1 teaspoon)\n- Nutmeg (pinch)\n- Salt (pinch)\n- Butter (4 tablespoons)\n- Maple syrup\n\n[2] Mix\n- In a large bowl, whisk together the eggs, milk, sugar, cinnamon, nutmeg, and salt until well combined\n\n[3] Dip Bread\n- Dip each slice of bread into the egg mixture, ensuring that they are well coated.\n\n[4] Preheat Pan\n- Melt 2 tablespoons of butter in a large non-stick skillet or griddle over medium heat.\n\n[5] Cook\n- Add the coated bread slices to the heated skillet and cook for 2 to 3 minutes on each side, or until they are golden brown.\n\n[6] Add Butter\n- Melt the remaining 2 tablespoons of butter in the skillet and cook the rest of the bread slices in the same manner.\n\n[7] Serve\n- Serve the French toast hot with butter and maple syrup.\n\nEnd."
+    },
+    {
+      "instruction": "Design a wireframe for a mobile application that allows users to order their preferred meals for delivery.",
+      "input": "",
+      "output": "As I'm an AI language model, I'm not able to create visual designs. However, I can describe the elements that I would include in a wireframe for a mobile application that allows users to order meals for delivery.\n\n1. **Splash screen:** When the user opens the app, they are greeted with a splash screen featuring the logo and name of the application.\n\n2. **Login / Sign up:** The user has the option to log in or sign up for an account. This can be done via email or through a social media account.\n\n3. **Home screen:** Once logged in, the user is taken to the home screen. This screen displays popular meal options, special deals, and a search bar at the top of the page where users can search for specific dishes or restaurants.\n\n4. **Menu:** Once the user selects a restaurant, they are taken to the menu page. Here, they can browse the available dishes and add items to their cart.\n\n5. **Cart:** The cart displays the items that the user has selected. They can review their order, make any changes, and proceed to the checkout.\n\n6. **Checkout:** The checkout page enables the user to enter their delivery address and select their preferred payment method. Once the order is placed, a confirmation message is displayed, and the user can track the status of their order.\n\n7. **Order History:** Users can view their past orders and reorder meals with just a few clicks.\n\n8. **Profile:** The profile page allows users to manage their account information, view their past orders, and add or edit their saved payment methods and delivery addresses. \n\nOverall, the wireframe for the mobile application would be designed to offer an intuitive and user-friendly experience, allowing users to quickly and easily order their preferred meals for delivery."
+    },
+    {
+      "instruction": "Process the following JSON data into a list of Python dictionaries.",
+      "input": "[\n    {\n        \"name\": \"John Doe\",\n        \"age\": 25,\n        \"location\": \"New York City\"\n     },\n     {\n        \"name\": \"Jane Doe\",\n        \"age\": 28,\n        \"location\": \"Los Angeles\"\n     }\n]",
+      "output": "Sure, here is the list of dictionaries that represents the input JSON data:\n\n[   \n    {\n        \"name\": \"John Doe\",\n        \"age\": 25,\n        \"location\": \"New York City\"\n    },\n    {\n        \"name\": \"Jane Doe\",\n        \"age\": 28,\n        \"location\": \"Los Angeles\"\n    }\n]"
+    },
+    {
+      "instruction": "What is the best approach for solving quantum computing problems?",
+      "input": "",
+      "output": "Quantum computing is a highly specialized field, so the best approach to solving problems in this area will depend on the specific nature of the problem at hand. However, here are some general steps that can be followed to approach quantum computing problems:\n\n1. Understand the problem and the principles involved: Quantum computing is based on principles of quantum mechanics, so it's important to have a solid understanding of the underlying concepts such as superposition, entanglement, and quantum gates.\n\n2. Break the problem down into smaller parts: Complex problems are usually easier to solve when they are broken down into smaller, more manageable parts. Analyze the problem at hand and see if it can be divided into subproblems that can be tackled individually.\n\n3. Choose the right algorithm: There are several quantum algorithms that have been developed to solve specific types of problems. Some common ones include Shor's algorithm for integer factorization, Grover's algorithm for searching unstructured databases, and the quantum Fourier transform for frequency analysis. Choose the one that is best suited to solve your problem.\n\n4. Implement your solution: Once you have identified the right algorithm, implement it using a quantum programming language such as Q# or Quipper. These languages are specifically designed to allow quantum operations and manipulations. \n\n5. Test and refine your solution: After implementing your solution, run tests to see if it's producing the expected results. If not, debug your code and refine your approach until you arrive at the correct solution.\n\n6. Keep up to date with developments in the field: Quantum computing is a rapidly changing field, with new breakthroughs and advancements being made all the time. Stay informed about the latest techniques and approaches by reading research papers, attending conferences, and networking with others in the field."
+    },
+    {
+      "instruction": "Provide five examples of post-secondary education institutions.",
+      "input": "",
+      "output": "1. Harvard University - located in Cambridge, Massachusetts, USA, it is a private Ivy League research university that offers undergraduate, graduate, and professional programs in various fields.\n\n2. University of Cambridge - located in Cambridge, England, it is a public research university and one of the world's oldest universities, offering undergraduate and postgraduate programs in various fields.\n\n3. Stanford University - located in Stanford, California, USA, it is a private research university known for its academic strength in engineering, business, and the sciences.\n\n4. University of Toronto - located in Toronto, Ontario, Canada, it is a public research university that offers undergraduate, graduate, and professional programs in various fields.\n\n5. The University of Tokyo - located in Tokyo, Japan, it is a national research university that provides undergraduate and postgraduate programs in various fields, including humanities, social sciences, science, engineering, and medicine."
+    },
+    {
+      "instruction": "Design a financial portfolio for an investor with an aggressive investment strategy.",
+      "input": "",
+      "output": "Here is an overview of a financial portfolio designed for an aggressive investor:\n\n1. Stocks: An aggressive portfolio could have a majority of its allocation, say 80%, in stocks with a focus on growth and momentum investing. The portfolio can include a mix of large-cap tech companies, small-cap growth companies, and mid-cap companies with strong potential. \n\n2. Equity Mutual Funds or ETFs: In addition to individual stocks, the portfolio could have about 10% allocation in equity mutual funds or ETFs. This provides broader diversification while sticking to the growth-oriented investment approach. \n\n3. Alternative investments: Aggressive investors tend to take on more risk for potential high returns. An allocation of 5% in alternative investments such as REITs, commodities, and hedge funds is advisable.\n\n4. Fixed-income securities: Although aggressive investors tend to focus on equities and growth-oriented investments, it is important to balance the portfolio with some fixed-income securities. The remaining 5% could be allocated in high-yield bonds or emerging market bonds for potentially higher returns than traditional fixed-income securities. \n\nIt is important to note that this aggressive investment approach carries a high level of risk and volatility. As such, it is suitable for investors with a long-term horizon who are willing to take on such risks in pursuit of higher returns. Also, the suggested allocations may vary depending on the individual investor's preference and risk tolerance."
+    },
+    {
+      "instruction": "Create a comic strip illustrating the life of a software engineer.",
+      "input": "",
+      "output": "I'm sorry, but I'm an AI language model and I don't have the ability to create images. However, I can describe a few scenes for a comic strip that illustrates the life of a software engineer:\n\nScene 1: The first panel shows a software engineer sitting at his desk, surrounded by empty coffee cups, and typing furiously on his computer. A caption reads: \"Just another day in the life of a software engineer\".\n\nScene 2: The second panel shows the software engineer in a meeting, looking confused and holding a flowchart. A caption reads: \"Trying to explain technical jargon to non-technical coworkers.\"\n\nScene 3: The third panel shows the software engineer high-fiving his team after they successfully complete a project. A caption reads: \"The satisfaction of seeing your hard work come to fruition.\"\n\nScene 4: The fourth panel shows the software engineer pulling his hair out while looking at a screen full of error messages. A caption reads: \"Debugging - the bane of every software engineer's existence.\"\n\nScene 5: The fifth panel shows the software engineer at home, relaxing on the couch with his family, and a laptop on his lap. A caption reads: \"The never-ending quest for work-life balance.\""
+    },
+    {
+      "instruction": "Compute the value of sin(a) + cos(a) when a = 30 degrees in radians.",
+      "input": "",
+      "output": "Sure! To compute this, first we need to convert degrees to radians. We can do this by multiplying the number of degrees by the conversion factor (pi over 180 degrees).\n\na = 30 degrees * (\u03c0/180 degrees) = \u03c0/6 radians\n\nUsing this value for \u201ca\u201d, we can now compute the value of sin(a) + cos(a). Basic trigonometry states that: \n\nsin(\u03c0/6) = 1/2\ncos(\u03c0/6) = \u221a3/2\n\nsin(a) + cos(a) = sin(\u03c0/6) + cos(\u03c0/6)\n               = 1/2 + \u221a3/2\n               = (1+\u221a3)/2\n\nTherefore, when a = 30 degrees or \u03c0/6 radians, sin(a) + cos(a) equals (1+\u221a3)/2 or approximately 1.366."
+    }
+]
