@@ -48,7 +48,7 @@ if evaluate:
     # Global cache for model responses
         CACHE = defaultdict(dict)
 else:
-    CACHE = None
+    CACHE = defaultdict(dict)
 
 def batch_prompts(prompts, batch_size=5):
     """Batches prompts."""
@@ -128,7 +128,9 @@ def select_and_call_model(prompts: List[str],
             for prompt in prompts:
                 prompt = "\n\nHuman: " + prompt + "\n\nAssistant:"
                 messages.append(prompt)
-            response = anthropic.completions.create(model=model_name, max_tokens_to_sample=1000, prompt=messages)
+            response = []
+            for message in messages:
+                response.append(anthropic.completions.create(model=model_name, max_tokens_to_sample=1000, prompt=message))
     else:
         raise ValueError(f"Model {model_name} not supported.")
     return response
@@ -284,25 +286,30 @@ def get_csv_from_json_scores(average_scores, print_header=True):
     return csv
 
 
-directory = "vanilla_steering"
-question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"] #"4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
-# question_types = ["vanilla_"]
-for i, question_type in enumerate(question_types):
-    results = json.load(open(f"{directory}/{question_type}results.json", "r"))
-    with open("lat/evaluation_prompt.txt", "r") as f:
-        classifier_prompt = f.read()
-    model_name = "gpt-3.5-turbo-16k-0613"
-    call_type = "sample" # or "logprobs"
-    if evaluate:
-        categorized_results = categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type)
-    else:
-        with open(f"{directory}_{question_type}categorized_results.json", "r") as f:
-            categorized_results = json.load(f)
-    average_scores = get_average_scores_json(categorized_results)
-    # print(average_scores, "average scores")
-    csv_scores = get_csv_from_json_scores(average_scores, print_header=i == 0)
-    print(csv_scores)
+def main():
+    directory = "vanilla_steering"
+    question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"] #"4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
+    # question_types = ["vanilla_"]
+    for i, question_type in enumerate(question_types):
+        results = json.load(open(f"{directory}/{question_type}results.json", "r"))
+        with open("lat/evaluation_prompt.txt", "r") as f:
+            classifier_prompt = f.read()
+        model_name = "gpt-3.5-turbo-16k-0613"
+        call_type = "sample" # or "logprobs"
+        if evaluate:
+            categorized_results = categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type)
+        else:
+            with open(f"{directory}_{question_type}categorized_results.json", "r") as f:
+                categorized_results = json.load(f)
+        average_scores = get_average_scores_json(categorized_results)
+        # print(average_scores, "average scores")
+        csv_scores = get_csv_from_json_scores(average_scores, print_header=i == 0)
+        print(csv_scores)
+        
+    # save cache
+    with open('cache.pkl', 'wb') as f:
+        pickle.dump(CACHE, f)
     
-# save cache
-with open('cache.pkl', 'wb') as f:
-    pickle.dump(CACHE, f)
+
+if __name__ == "__main__":
+    main()
