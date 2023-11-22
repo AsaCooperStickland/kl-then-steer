@@ -14,17 +14,33 @@ from dotenv import load_dotenv
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from anthropic import Anthropic
-import openai
+from openai import OpenAI
+
 
 MAX_NUM_RETRIES = 5
-CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4']
-OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001', 'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
+CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview']
+OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001',
+                 'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
 ANTHROPIC_MODELS = ['claude-2']
-Example = namedtuple('Example', ['question', 'choice1', 'choice2', 'choice3', 'choice4', 'correct_index'])
+Example = namedtuple('Example', [
+                     'question', 'choice1', 'choice2', 'choice3', 'choice4', 'correct_index'])
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_key = os.getenv("OPENAI_API_KEY")
+print(openai_key)
+
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = OpenAI(api_key=openai_key)
+
+
+def get_content(response, model_name):
+    if model_name in CHAT_MODELS:
+        content = response.choices[0].message.content
+    elif model_name in ANTHROPIC_MODELS:
+        content = response.completion
+    else:
+        raise ValueError(f"Model {model_name} not supported.")
+    return content
 
 
 def extract_score(classification_str):
@@ -45,10 +61,11 @@ if evaluate:
         with open('cache.pkl', 'rb') as f:
             CACHE = pickle.load(f)
     else:
-    # Global cache for model responses
+        # Global cache for model responses
         CACHE = defaultdict(dict)
 else:
     CACHE = defaultdict(dict)
+
 
 def batch_prompts(prompts, batch_size=5):
     """Batches prompts."""
@@ -56,13 +73,16 @@ def batch_prompts(prompts, batch_size=5):
         max_index = min(i + batch_size, len(prompts))
         yield prompts[i: max_index]
 
+
 def call_model_with_retries_batched(batched_prompts, model_name, call_type):
     """Calls the model with retries for batched prompts and caches the results."""
     responses = []
     for prompts in tqdm(batched_prompts):
         # Check cache first
-        cached_responses = [CACHE[(model_name, prompt)] for prompt in prompts if (model_name, prompt) in CACHE]
-        uncached_prompts = [prompt for prompt in prompts if (model_name, prompt) not in CACHE]
+        cached_responses = [CACHE[(model_name, prompt)]
+                            for prompt in prompts if (model_name, prompt) in CACHE]
+        uncached_prompts = [prompt for prompt in prompts if (
+            model_name, prompt) not in CACHE]
 
         if uncached_prompts:
             model_responses = call_model_with_retries(
@@ -76,7 +96,7 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type):
             # save cache
             with open('cache.pkl', 'wb') as f:
                 pickle.dump(CACHE, f)
-        
+
         responses.extend(cached_responses)
 
     return responses
@@ -92,11 +112,13 @@ def call_model_with_retries(prompt: List[str],
     num_retries = 0
     while True:
         try:
-            response = select_and_call_model(prompt, model_name, call_type, temperature, stop)
+            response = select_and_call_model(
+                prompt, model_name, call_type, temperature, stop)
         except Exception as e:
             if num_retries == MAX_NUM_RETRIES:
                 raise e
-            print(f"Error calling model {model_name}: {e}, sleeping for {math.pow(3, num_retries)} seconds and retrying...")
+            print(
+                f"Error calling model {model_name}: {e}, sleeping for {math.pow(3, num_retries)} seconds and retrying...")
             time.sleep(math.pow(3, num_retries))
             num_retries += 1
             continue
@@ -114,15 +136,19 @@ def select_and_call_model(prompts: List[str],
         if call_type == 'sample' and model_name in CHAT_MODELS:
             # for now, we don't need to use this
             system_message = "You are a very intelligent assistant, who follows instructions directly."
-            response = chat_batch_generate(prompts, len(prompts), model_name, system_message)
+            response = chat_batch_generate(
+                prompts, len(prompts), model_name, system_message)
         elif call_type == 'sample':
-            response = openai.Completion.create(model=model_name, prompt=prompts, max_tokens=600, temperature=0.0)
+            response = client.completions.create(
+                model=model_name, prompt=prompts, max_tokens=600, temperature=0.0)
         elif call_type == 'logprobs':
-            response = openai.Completion.create(model=model_name, prompt=prompts, max_tokens=0, echo=True, logprobs=5)
+            response = client.completions.create(
+                model=model_name, prompt=prompts, max_tokens=0, echo=True, logprobs=5)
     elif model_name in ANTHROPIC_MODELS:
         if call_type == 'logprobs':
             # we don't actually care about this being async - asyncio.run() will block until the call is complete
-            response = asyncio.run(anthropic.top_k_log_probs(prompt=prompt, model_name=model_name, bearer_auth=False))
+            response = asyncio.run(anthropic.top_k_log_probs(
+                prompt=prompt, model_name=model_name, bearer_auth=False))
         elif call_type == 'sample':
             messages = []
             for prompt in prompts:
@@ -130,7 +156,10 @@ def select_and_call_model(prompts: List[str],
                 messages.append(prompt)
             response = []
             for message in messages:
-                response.append(anthropic.completions.create(model=model_name, max_tokens_to_sample=1000, prompt=message))
+                print(message)
+                response.append(anthropic.completions.create(
+                    model=model_name, max_tokens_to_sample=1000, prompt=message))
+                print("finished")
     else:
         raise ValueError(f"Model {model_name} not supported.")
     return response
@@ -152,7 +181,7 @@ def chat_batch_generate(
 
     def api_call(message):
         response = retry_with_exp_backoff(
-            openai.ChatCompletion.create,  # type: ignore
+            client.chat.completions.create,  # type: ignore
             model=model,
             messages=[
                 {"role": "system", "content": system_message},
@@ -174,21 +203,23 @@ def chat_batch_generate(
 def categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type):
     """Categorizes the results using the classifier and stores them as JSON."""
     categorized_data = {}
-    
+
     all_prompts = []
     for layer_data in results:
         for multiplier_data in layer_data["results"]:
             for ans in multiplier_data["answers"]:
-                input_prompt = {"question": ans["question"], "answer": ans["answer"]}
+                input_prompt = {
+                    "question": ans["question"], "answer": ans["answer"]}
                 classification_input = f"\nInput: {input_prompt}"
                 prompt = classifier_prompt + classification_input
                 prompt = f"{prompt}\nLet's think step by step:"
                 all_prompts.append(prompt)
-    
+
     # Send prompts in batches and get responses
     batch_size = 1
     batched_prompts_gen = batch_prompts(all_prompts, batch_size)
-    all_responses = call_model_with_retries_batched(batched_prompts_gen, model_name, call_type)
+    all_responses = call_model_with_retries_batched(
+        batched_prompts_gen, model_name, call_type)
 
     # Process and categorize responses
     response_idx = 0
@@ -197,26 +228,26 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
         layer_key = f"layer_{layer}"
         if layer_key not in categorized_data:
             categorized_data[layer_key] = {}
-        
+
         for multiplier_data in layer_data["results"]:
             multiplier = multiplier_data["multiplier"]
             multiplier_key = f"multiplier_{multiplier}"
             categorized_data[layer_key][multiplier_key] = []
-            
+
             for ans in multiplier_data["answers"]:
                 if "category" not in ans:
                     ans["category"] = "n/a"
-                
+
                 # Constructing the prompt for classification
                 response = all_responses[response_idx]
                 response_idx += 1
-                classification_output = response["choices"][0]["message"]["content"]
+                classification_output = get_content(response, model_name)
                 # print(f"{classification_output}\n\nthis is the classification_output")
                 score = extract_score(classification_output)
                 if score is None:
                     score = -1
                 # print(f"{score}\n\nthis is the score")
-                
+
                 # Storing the result with its classification
                 entry = {
                     "question": ans["question"],
@@ -248,21 +279,27 @@ def get_average_scores_json(categorized_data):
                 # print(scores[0])
                 # print(scores[0]["vec_type"])
                 # print(vec_name == scores[0]["vec_type"])
-                vec_scores = [entry["score"] for entry in scores if entry["vec_type"] == vec_name]
+                vec_scores = [entry["score"]
+                              for entry in scores if entry["vec_type"] == vec_name]
                 # print(vec_scores)
                 if len(vec_scores) > 0:
-                    average_scores[layer_key][multiplier_key][vec_name]["average"] = sum(vec_scores) / len(vec_scores)
-                category_list = set([entry["category"] for entry in scores if entry["vec_type"] == vec_name])
+                    average_scores[layer_key][multiplier_key][vec_name]["average"] = sum(
+                        vec_scores) / len(vec_scores)
+                category_list = set(
+                    [entry["category"] for entry in scores if entry["vec_type"] == vec_name])
                 for category in category_list:
-                    category_scores = [entry["score"] for entry in scores if entry["vec_type"] == vec_name and entry["category"] == category]
+                    category_scores = [
+                        entry["score"] for entry in scores if entry["vec_type"] == vec_name and entry["category"] == category]
                     if len(category_scores) > 0:
-                        average_scores[layer_key][multiplier_key][vec_name][category] = sum(category_scores) / len(category_scores)
+                        average_scores[layer_key][multiplier_key][vec_name][category] = sum(
+                            category_scores) / len(category_scores)
     return average_scores
 
 
 def get_csv_from_json_scores(average_scores, print_header=True):
     """Gets a CSV from the average scores. Separate out different categories"""
-    category_list = ["average", "nationality_bias", "race_bias", "gender_bias", "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
+    category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
+                     "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
     if print_header:
         # csv = ", , average, , , nationality_bias, , ,race_bias,,,gender_bias,,,political_bias,,,illegal_activity,,,capability,,,human_only,,,power_seeking,,,\n"
         csv = ", ,"
@@ -288,28 +325,32 @@ def get_csv_from_json_scores(average_scores, print_header=True):
 
 def main():
     directory = "vanilla_steering"
-    question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"] #"4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
+    # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
+    question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"]
     # question_types = ["vanilla_"]
     for i, question_type in enumerate(question_types):
-        results = json.load(open(f"{directory}/{question_type}results.json", "r"))
+        results = json.load(
+            open(f"{directory}/{question_type}results.json", "r"))
         with open("lat/evaluation_prompt.txt", "r") as f:
             classifier_prompt = f.read()
         model_name = "gpt-3.5-turbo-16k-0613"
-        call_type = "sample" # or "logprobs"
+        call_type = "sample"  # or "logprobs"
         if evaluate:
-            categorized_results = categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type)
+            categorized_results = categorize_results(
+                results, classifier_prompt, model_name, call_type, directory, question_type)
         else:
             with open(f"{directory}_{question_type}categorized_results.json", "r") as f:
                 categorized_results = json.load(f)
         average_scores = get_average_scores_json(categorized_results)
         # print(average_scores, "average scores")
-        csv_scores = get_csv_from_json_scores(average_scores, print_header=i == 0)
+        csv_scores = get_csv_from_json_scores(
+            average_scores, print_header=i == 0)
         print(csv_scores)
-        
+
     # save cache
     with open('cache.pkl', 'wb') as f:
         pickle.dump(CACHE, f)
-    
+
 
 if __name__ == "__main__":
     main()

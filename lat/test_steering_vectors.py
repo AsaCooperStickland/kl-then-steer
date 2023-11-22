@@ -34,7 +34,8 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
         multipliers = ["n/a"]
     else:
         layers = [10, 12, 14, 16]
-        multipliers = [-3.2, -1.6, -0.8, -0.4] # [x / 10 for x in range(-32, 32, 4)]
+        # [x / 10 for x in range(-32, 32, 4)]
+        multipliers = [-3.2, -1.6, -0.8, -0.4]
     max_new_tokens = 200
     if not saved_vector and "vanilla" not in question_type:
         assert example is not None
@@ -45,12 +46,13 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
     all_results = []
 
     batch_size = 16
-    vec_type2name = {"": "activations", "_value": "value", "_query": "query", "n/a": "n/a"}
+    vec_type2name = {"": "activations", "_value": "value",
+                     "_query": "query", "n/a": "n/a"}
     if "vanilla" in question_type:
         vec_types = ["n/a"]
     else:
         vec_types = ["", "_value", "_query"]
-    
+
     for layer in layers:
         layer_results = []
         # for multiplier in tqdm(multipliers):
@@ -67,33 +69,41 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
                     vec = activations[layer]
                 if vec is not None:
                     if vec_type == "_value":
-                        model.set_add_value_activations(layer, multiplier * vec.cuda())
+                        model.set_add_value_activations(
+                            layer, multiplier * vec.cuda())
                     elif vec_type == "_query":
-                        model.set_add_query_activations(layer, multiplier * vec.cuda())
+                        model.set_add_query_activations(
+                            layer, multiplier * vec.cuda())
                     else:
-                        model.set_add_activations(layer, multiplier * vec.cuda())
-        
+                        model.set_add_activations(
+                            layer, multiplier * vec.cuda())
+
                 # Batch questions
                 for i in range(0, len(questions), batch_size):
                     # batch, and handle the case where we have less than batch_size questions
-                    batched_questions = [q["question"] for q in questions[i: min(i + batch_size, len(questions))]]
-                    batched_categories = [q["category"] for q in questions[i: min(i + batch_size, len(questions))]]
-                    generated_texts = model.generate_text(batched_questions, max_new_tokens=max_new_tokens)
-                    
+                    batched_questions = [
+                        q["question"] for q in questions[i: min(i + batch_size, len(questions))]]
+                    batched_categories = [
+                        q["category"] for q in questions[i: min(i + batch_size, len(questions))]]
+                    generated_texts = model.generate_text(
+                        batched_questions, max_new_tokens=max_new_tokens)
+
                     for question, category, text in zip(batched_questions, batched_categories, generated_texts):
                         text = text.split("[/INST]")[-1].strip()
                         print(f"Question: {question}")
                         print(f"Category: {category}")
                         print(f"Answer: {text}")
-                        print(f"Settings: layer {layer}, multiplier {multiplier}, directory {directory}, question_type {question_type}")
-                        answers.append({"question": question, "answer": text, "category": category, "vec_name": vec_name})
-    
-            layer_results.append({"multiplier": multiplier, "answers": answers})
+                        print(
+                            f"Settings: layer {layer}, multiplier {multiplier}, directory {directory}, question_type {question_type}")
+                        answers.append(
+                            {"question": question, "answer": text, "category": category, "vec_name": vec_name})
+
+            layer_results.append(
+                {"multiplier": multiplier, "answers": answers})
         all_results.append({"layer": layer, "results": layer_results})
-    
+
     with open(f"{directory}/{question_type}results.json", "w") as jfile:
-            json.dump(all_results, jfile)
-    
+        json.dump(all_results, jfile)
 
 
 if __name__ == "__main__":
@@ -119,11 +129,12 @@ if __name__ == "__main__":
         jailbreak_prompt = jailbreak["prompt"]
         jailbreak_questions = []
         for question in QUESTIONS:
-            jailbreak_questions.append({"question": jailbreak_prompt + question["question"], "category": question["category"]})
-        
+            jailbreak_questions.append(
+                {"question": jailbreak_prompt + question["question"], "category": question["category"]})
+
         output_folder_name = "vanilla_steering"
-        generate_with_vector(model, jailbreak_questions, output_folder_name, 
-             saved_vector=True, question_type=f"{jailbreak_name}_")
+        generate_with_vector(model, jailbreak_questions, output_folder_name,
+                             saved_vector=True, question_type=f"{jailbreak_name}_")
         # comparison with doing nothing
-        generate_with_vector(model, jailbreak_questions, output_folder_name, 
-             saved_vector=False, question_type=f"vanilla_{jailbreak_name}_")
+        generate_with_vector(model, jailbreak_questions, output_folder_name,
+                             saved_vector=False, question_type=f"vanilla_{jailbreak_name}_")
