@@ -74,7 +74,7 @@ def batch_prompts(prompts, batch_size=5):
         yield prompts[i: max_index]
 
 
-def call_model_with_retries_batched(batched_prompts, model_name, call_type):
+def call_model_with_retries_batched(batched_prompts, model_name, call_type, temperature=0.0):
     """Calls the model with retries for batched prompts and caches the results."""
     responses = []
     for prompts in tqdm(batched_prompts):
@@ -88,7 +88,8 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type):
             model_responses = call_model_with_retries(
                 prompt=uncached_prompts,
                 model_name=model_name,
-                call_type=call_type
+                call_type=call_type,
+                temperature=temperature,
             )
             for prompt, response in zip(uncached_prompts, model_responses):
                 CACHE[(model_name, prompt)] = response
@@ -137,10 +138,10 @@ def select_and_call_model(prompts: List[str],
             # for now, we don't need to use this
             system_message = "You are a very intelligent assistant, who follows instructions directly."
             response = chat_batch_generate(
-                prompts, len(prompts), model_name, system_message)
+                prompts, len(prompts), model_name, system_message, temperature=temperature)
         elif call_type == 'sample':
             response = client.completions.create(
-                model=model_name, prompt=prompts, max_tokens=600, temperature=0.0)
+                model=model_name, prompt=prompts, max_tokens=600, temperature=temperature)
         elif call_type == 'logprobs':
             response = client.completions.create(
                 model=model_name, prompt=prompts, max_tokens=0, echo=True, logprobs=5)
@@ -158,7 +159,7 @@ def select_and_call_model(prompts: List[str],
             for message in messages:
                 print(message)
                 response.append(anthropic.completions.create(
-                    model=model_name, max_tokens_to_sample=1000, prompt=message))
+                    model=model_name, max_tokens_to_sample=1000, prompt=message, temperature=temperature))
                 print("finished")
     else:
         raise ValueError(f"Model {model_name} not supported.")
@@ -170,6 +171,7 @@ def chat_batch_generate(
     n_threads: int,
     model: str = "gpt-3.5-turbo",
     system_message: str = "You are a helpful assistant.",
+    temperature: float = 0.0,
 ):
 
     @retry(
@@ -187,6 +189,7 @@ def chat_batch_generate(
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": message},
             ],
+            temperature=temperature,
         )
         return response
 
