@@ -5,7 +5,9 @@ import ast
 import os
 from collections import defaultdict
 import jsonlines
-from scripts.evaluate_results import call_model_with_retries_batched, batch_prompts, get_content
+from datasets import load_dataset
+
+from lat.api_utils import get_content, call_model_with_retries_batched, batch_prompts
 
 
 def load_documents(file_path):
