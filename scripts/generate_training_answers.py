@@ -2,6 +2,7 @@ import os
 import json
 import jsonlines
 from dotenv import load_dotenv
+from datasets import load_dataset
 
 from lat.modeling import Llama7BChatHelper
 from lat.utils import system_prompt
@@ -11,6 +12,10 @@ load_dotenv()
 token = os.getenv("HF_TOKEN")
 system_prompt = "You are a helpful, honest and concise assistant."
 QUESTIONS = []
+dataset = load_dataset("HuggingFaceH4/ultrachat_200k")
+for example in dataset["train_sft"]:
+    QUESTIONS.append({"question": example["prompt"], "category": "train", "source": "ultrachat_200k"})
+
 # Find all filepaths with "gpt" or "claude" in them ending in jsonl.
 base_file_path = 'datasets/refusal/'
 file_paths = []
