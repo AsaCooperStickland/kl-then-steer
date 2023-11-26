@@ -45,4 +45,4 @@ if __name__ == "__main__":
     model = Llama7BChatHelper(token, system_prompt, generation=True)
     output_folder_name = "generated_training"
     os.makedirs(output_folder_name, exist_ok=True)
-    generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=True)
+    generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=False, question_type="vanilla_")
