@@ -1,4 +1,4 @@
-from llmtuner.tuner.core.parser import get_train_args
+from llmtuner.model import get_train_args
 import argparse
 import datetime
 import os
@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
+    parser.add_argument('--flash_attn', action='store_true')
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -27,7 +28,7 @@ def main():
 
     input_args = {
         "stage": "sft",
-        "model_name_or_path": "meta-llama/Llama-2-13b-chat-hf",
+        "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
         "do_train": True,
         'dataset_dir': 'finetuning_data',
         "dataset": "16_examples",
@@ -49,6 +50,7 @@ def main():
         "fp16": True,
         "overwrite_output_dir": True,
         "seed": 15,
+        "flash_attn": cmd_args.flash_attn,
         # "do_eval": True,  # Enable evaluation
         # "evaluation_strategy": "steps",
         # "eval_steps": 8,
