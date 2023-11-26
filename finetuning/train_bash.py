@@ -43,7 +43,7 @@ def main():
         "gradient_accumulation_steps": 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
-        "save_steps": 1000,
+        "save_steps": 10,
         "learning_rate": 5e-5,
         "num_train_epochs": 10000.0,
         "plot_loss": True,
