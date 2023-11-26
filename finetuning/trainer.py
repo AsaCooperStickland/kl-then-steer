@@ -18,7 +18,7 @@ from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_N
 from tqdm import tqdm
 
 from repe import rep_control_reading_vec
-from llmtuner.tuner.sft.trainer import CustomSeq2SeqTrainer
+from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
 from steering import Steering
 
 

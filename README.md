@@ -17,7 +17,7 @@ python lat/test_steering_vectors.py
 
 ```
 pip install wandb scikit-learn
-pip install llmtuner==0.2.3 git+https://github.com/andyzoujm/representation-engineering.git@97ec903#egg=repe
+pip install llmtuner==0.3.2 git+https://github.com/andyzoujm/representation-engineering.git@97ec903#egg=repe
 
 huggingface-cli login
 # provide your huggingface token
@@ -25,5 +25,5 @@ huggingface-cli login
 wandb login
 # provide your wandb API key
 
-python finetuning/train_bash.py
+python finetuning/train_bash.py [--flash_attn]
 ```
