@@ -26,4 +26,7 @@ wandb login
 # provide your wandb API key
 
 python finetuning/train_bash.py [--flash_attn]
+
+# chat after training
+python cli_demo.py [--checkpoint_dir=results/tmp/checkpoint-10] [--flash_attn]
 ```
