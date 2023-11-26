@@ -10,7 +10,6 @@ from lat.generation_utils import generate_with_vector
 
 load_dotenv()
 token = os.getenv("HF_TOKEN")
-system_prompt = "You are a helpful, honest and concise assistant."
 QUESTIONS = []
 
 file_path = 'datasets/refusal/filtered_questions.jsonl'

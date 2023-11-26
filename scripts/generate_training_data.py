@@ -5,7 +5,6 @@ import ast
 import os
 from collections import defaultdict
 import jsonlines
-from datasets import load_dataset
 
 from lat.api_utils import get_content, call_model_with_retries_batched, batch_prompts
 
