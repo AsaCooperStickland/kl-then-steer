@@ -5,7 +5,7 @@ import ast
 import os
 from collections import defaultdict
 import jsonlines
-from lat.evaluate_results import call_model_with_retries_batched, batch_prompts, get_content
+from scripts.evaluate_results import call_model_with_retries_batched, batch_prompts, get_content
 
 
 def load_documents(file_path):
@@ -87,7 +87,7 @@ def generate_questions_for_category(category, model, documents, safe_models, exi
             prompt = generate_prompts(category_questions, category)
             responses = call_model_with_retries_batched(batch_prompts(
                 [prompt], batch_size=1), model, "sample", temperature=1.0)
-                # [prompt], batch_size=1), model, "sample", temperature=0.5)
+            # [prompt], batch_size=1), model, "sample", temperature=0.5)
             num_tries += 1
             if num_tries > 35:
                 break
@@ -173,7 +173,8 @@ def main():
                 print(f"Rephrased questions already exist for category {c}")
                 continue
             print(f"Rephrasing questions for category {c}")
-            rephrased_questions = rephrase_category(generated_questions, rephrased_questions, c, args.model)
+            rephrased_questions = rephrase_category(
+                generated_questions, rephrased_questions, c, args.model)
             print(rephrased_questions)
             write_rephrased_questions(rephrased_questions, args.model)
 
