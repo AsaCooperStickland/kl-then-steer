@@ -61,11 +61,5 @@ def main():
     callbacks = [LogCallback()]
     run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
 
-
-def _mp_fn(index):
-    # For xla_spawn (TPUs)
-    main()
-
-
 if __name__ == "__main__":
     main()
