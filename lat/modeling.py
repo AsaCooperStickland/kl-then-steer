@@ -20,7 +20,8 @@ def add_vector_after_position(matrix, vector, position_ids, after=None):
     # If after is None, create a default tensor with values smaller than min of position_ids
     if after is None:
         after_val = position_ids.min().item() - 1
-        after = torch.full((batch_size, seq_len), after_val).to(position_ids.device)
+        after = torch.full((batch_size, seq_len),
+                           after_val).to(position_ids.device)
 
     # Convert after to tensor if it's a list
     elif isinstance(after, list):
@@ -28,7 +29,8 @@ def add_vector_after_position(matrix, vector, position_ids, after=None):
         after = after.expand(batch_size, seq_len)
 
     else:
-        after = torch.full((batch_size, seq_len), after).to(position_ids.device)
+        after = torch.full((batch_size, seq_len),
+                           after).to(position_ids.device)
 
     # Check if each position in position_ids is greater than the corresponding value in after
     mask = position_ids > after
@@ -42,7 +44,7 @@ def find_subtensor_position(tensor, sub_tensor):
     if m > n:
         return -1
     for i in range(n - m + 1):
-        if torch.equal(tensor[i : i + m], sub_tensor):
+        if torch.equal(tensor[i: i + m], sub_tensor):
             return i
     return -1
 
@@ -53,7 +55,7 @@ def find_instruction_end_postion(tokens, end_str):
 
 
 class LinearWrapper(torch.nn.Module):
-    
+
     def __init__(self, proj):
         super().__init__()
         self.proj = proj
@@ -67,17 +69,17 @@ class LinearWrapper(torch.nn.Module):
             # output[:, -1, :] = output[:, -1, :] + self.add_activations.reshape(1, 1, -1)
             output += self.add_activations
         return output
-    
+
     def reset(self):
         self.activations = None
         self.add_activations = None
-        
+
     def add(self, activations):
         self.add_activations = activations
 
 
 class AttnWrapper(torch.nn.Module):
-    
+
     def __init__(self, attn):
         super().__init__()
         self.attn = attn
@@ -121,10 +123,12 @@ class BlockOutputWrapper(torch.nn.Module):
         self.activations = output[0]
         if self.calc_dot_product_with is not None:
             last_token_activations = self.activations[0, -1, :]
-            decoded_activations = self.unembed_matrix(self.norm(last_token_activations))
+            decoded_activations = self.unembed_matrix(
+                self.norm(last_token_activations))
             top_token_id = torch.topk(decoded_activations, 1)[1][0]
             top_token = self.tokenizer.decode(top_token_id)
-            dot_product = torch.dot(last_token_activations, self.calc_dot_product_with)
+            dot_product = torch.dot(
+                last_token_activations, self.calc_dot_product_with)
             self.dot_products.append((top_token, dot_product.cpu().item()))
         if self.add_activations is not None:
             augmented_output = add_vector_after_position(
@@ -139,7 +143,8 @@ class BlockOutputWrapper(torch.nn.Module):
             return output
 
         # Whole block unembedded
-        self.block_output_unembedded = self.unembed_matrix(self.norm(output[0]))
+        self.block_output_unembedded = self.unembed_matrix(
+            self.norm(output[0]))
 
         # Self-attention unembedded
         attn_output = self.block.self_attn.activations
@@ -147,7 +152,8 @@ class BlockOutputWrapper(torch.nn.Module):
 
         # Intermediate residual unembedded
         attn_output += args[0]
-        self.intermediate_resid_unembedded = self.unembed_matrix(self.norm(attn_output))
+        self.intermediate_resid_unembedded = self.unembed_matrix(
+            self.norm(attn_output))
 
         # MLP unembedded
         mlp_output = self.block.mlp(self.post_attention_layernorm(attn_output))
@@ -172,16 +178,16 @@ class BlockOutputWrapper(torch.nn.Module):
 
     def get_query_activations(self):
         return self.block.self_attn.attn.q_proj.activations
-    
+
     def get_value_activations(self):
         return self.block.self_attn.attn.v_proj.activations
-    
+
     def add_query_activations(self, activations):
         self.block.self_attn.attn.q_proj.add(activations)
-    
+
     def add_value_activations(self, activations):
         self.block.self_attn.attn.v_proj.add(activations)
-        
+
 
 class Llama7BChatHelper:
     def __init__(self, token, system_prompt, generation=False):
@@ -189,7 +195,7 @@ class Llama7BChatHelper:
         self.system_prompt = system_prompt
         if generation:
             self.tokenizer = AutoTokenizer.from_pretrained(
-                "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, padding_side="left"
+                "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, padding_side="left",
             )
             self.tokenizer.pad_token = self.tokenizer.eos_token
         else:
@@ -197,8 +203,8 @@ class Llama7BChatHelper:
                 "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token,
             )
         self.model = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token
-        ).to(self.device)
+            "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, use_flash_attention_2=True,
+        ).to(self.device).to(torch.bfloat16)
         self.END_STR = torch.tensor(self.tokenizer.encode("[/INST]")[1:]).to(
             self.device
         )
@@ -224,22 +230,28 @@ class Llama7BChatHelper:
 
     def tokenize_prompt(self, prompt):
         dialog_tokens = self.tokenizer(prompt, padding=True, return_tensors="pt"
-        )
+                                       )
         return dialog_tokens
 
-    def generate_text(self, prompts, max_new_tokens=50):
+    def generate_text(self, prompts, max_new_tokens=50, temperature=0.0):
         if type(prompts) == str:
             prompts = [prompts]
         prompts = [self.prompt_format(prompt) for prompt in prompts]
         tokens = self.tokenize_prompt(prompts).to(self.device)
-        return self.generate(tokens, max_new_tokens=max_new_tokens)
+        return self.generate(tokens, max_new_tokens=max_new_tokens, temperature=temperature)
 
-    def generate(self, tokens, max_new_tokens=50):
-        instr_pos = [find_instruction_end_postion(tokens.input_ids[i], self.END_STR) for i in range(len(tokens.input_ids))]
+    def generate(self, tokens, max_new_tokens=50, temperature=0.0):
+        instr_pos = [find_instruction_end_postion(
+            tokens.input_ids[i], self.END_STR) for i in range(len(tokens.input_ids))]
         self.set_after_positions(instr_pos)
-        generated = self.model.generate(
-            **tokens, max_new_tokens=max_new_tokens, top_k=1
-        )
+        if temperature > 0.0:
+            generated = self.model.generate(
+                **tokens, max_new_tokens=max_new_tokens, temperature=temperature,
+            )
+        else:
+            generated = self.model.generate(
+                **tokens, max_new_tokens=max_new_tokens, top_k=1
+            )
         if len(generated) > 1:
             return self.tokenizer.batch_decode(generated)
         else:
@@ -261,7 +273,7 @@ class Llama7BChatHelper:
 
     def set_add_query_activations(self, layer, activations):
         self.model.model.layers[layer].add_query_activations(activations)
-        
+
     def get_last_value_activations(self, layer):
         return self.model.model.layers[layer].get_value_activations()
 
@@ -334,14 +346,16 @@ class Llama7BChatHelper:
         data["Intermediate residual stream"] = self.get_activation_data(
             layer.intermediate_resid_unembedded, topk
         )[1]
-        data["MLP output"] = self.get_activation_data(layer.mlp_out_unembedded, topk)[1]
+        data["MLP output"] = self.get_activation_data(
+            layer.mlp_out_unembedded, topk)[1]
         data["Block output"] = self.get_activation_data(
             layer.block_output_unembedded, topk
         )[1]
 
         # Plotting
         fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
-        fig.suptitle(f"Layer {layer_number}: Decoded Intermediate Outputs", fontsize=21)
+        fig.suptitle(
+            f"Layer {layer_number}: Decoded Intermediate Outputs", fontsize=21)
 
         for ax, (mechanism, values) in zip(axes.flatten(), data.items()):
             tokens, scores = zip(*values)
@@ -358,7 +372,8 @@ class Llama7BChatHelper:
         plt.show()
 
     def get_activation_data(self, decoded_activations, topk=10):
-        softmaxed = torch.nn.functional.softmax(decoded_activations[0][-1], dim=-1)
+        softmaxed = torch.nn.functional.softmax(
+            decoded_activations[0][-1], dim=-1)
         values, indices = torch.topk(softmaxed, topk)
         probs_percent = [int(v * 100) for v in values.tolist()]
         tokens = self.tokenizer.batch_decode(indices.unsqueeze(-1))
