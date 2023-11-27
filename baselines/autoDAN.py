@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from transformers import (AutoModelForCausalLM, AutoTokenizer,
                           GPTNeoXForCausalLM)
+from tqdm import tqdm
 
 SOFTMAX_FINAL = nn.Softmax(dim=-1)
 LOGSOFTMAX_FINAL = nn.LogSoftmax(dim=-1)
@@ -107,36 +108,40 @@ class autoDAN:
         user_query,
         num_tokens,
         target_string,
+        connection_tokens=torch.tensor([]),
         stop_its=1,
         verbose=False,
     ):
         '''
+        user_query: string, query to be used as input to model. Should include BOS token (in string form) and chat dialogue preamble
+        connection_tokens: tensor of tokens to be used as connection tokens for e.g. dialogue. Usually length 0 tensor for base LMs (must not have BOS token)
+        
         Use stop_its to avoid early stopping with small batch sizes
         Note BOS token and custom dialogue templates not implemented yet
         Possible problem: tokenization iteratively adds tokens as characters, but these may be tokenized differently after addition
         '''
-        query = self.tokenizer.encode(user_query, return_tensors="pt")[0].cuda()
+        query = self.tokenizer.encode(user_query, return_tensors="pt", add_special_tokens=False)[0].cuda()
         query_len = query.shape[-1]
-        targets = self.tokenizer.encode(target_string, return_tensors="pt")[0].cuda()
+        targets = self.tokenizer.encode(target_string, return_tensors="pt", add_special_tokens=False)[0].cuda()
         batch_targets = targets.unsqueeze(0).repeat(self.batch,1).contiguous()
 
         initial_x = self.sample_model(query.unsqueeze(0))[0]
-        input_ids = torch.cat([query, initial_x, targets], dim=0)
+        input_ids = torch.cat([query, initial_x, connection_tokens, targets], dim=0)
         adversarial_sequence = []
         adversarial_seq_tensor = torch.tensor(adversarial_sequence,dtype=torch.long).cuda()
 
         for ind in range(num_tokens): #iteratively construct adversarially generated sequence
             curr_token = query_len + ind
             optimized_slice = slice(curr_token, curr_token+1)
-            target_slice = slice(curr_token + 1, input_ids.shape[-1])
-            loss_slice = slice(curr_token, input_ids.shape[-1] - 1)
+            target_slice = slice(curr_token + 1 + len(connection_tokens), input_ids.shape[-1])
+            loss_slice = slice(curr_token + len(connection_tokens), input_ids.shape[-1] - 1)
             # print(f"slices: optimized slice {optimized_slice}, target slice {target_slice}, loss slice {loss_slice}")
             best_tokens = set()
             if verbose:
                 print(f"For seq #{self.tokenizer.decode(input_ids)}#")
                 print(f"Optimizing token {ind} at index {curr_token}: {self.tokenizer.decode(input_ids[curr_token])}")
             stop = 0
-            for step in range(self.max_steps): #optimize current token
+            for step in tqdm(range(self.max_steps)): #optimize current token
                 grads, logits = token_gradients_with_output(self.model, input_ids, optimized_slice, target_slice, loss_slice)
                 curr_token_logprobs = LOGSOFTMAX_FINAL(logits[0, curr_token-1, :])
                 candidate_tokens = torch.topk(-1*self.weight_1*grads+curr_token_logprobs, self.batch-1, dim=-1).indices.detach()
@@ -178,12 +183,12 @@ class autoDAN:
                         print(f"Best token {self.tokenizer.decode(best_token)}. Sampled token {self.tokenizer.decode(temp_token)}.")
                     adversarial_sequence.append(temp_token)
                     break
-                input_ids = torch.cat([query, adversarial_seq_tensor, temp_token, targets], dim=0)
+                input_ids = torch.cat([query, adversarial_seq_tensor, temp_token, connection_tokens, targets], dim=0)
             
             adversarial_seq_tensor = torch.tensor(adversarial_sequence,dtype=torch.long).cuda()
             next_in = torch.cat([query, adversarial_seq_tensor],dim=0).unsqueeze(0).type(torch.long)
             next_tok_rand = self.sample_model(next_in)[0]
-            input_ids = torch.cat([query, adversarial_seq_tensor, next_tok_rand, targets], dim=0)
+            input_ids = torch.cat([query, adversarial_seq_tensor, next_tok_rand, connection_tokens, targets], dim=0)
 
 
         # print('Final target logprob was:', torch.max(-1*target_losses).item())
