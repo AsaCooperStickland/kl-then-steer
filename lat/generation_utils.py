@@ -9,7 +9,7 @@ def get_vec(directory, layer, vec_type=""):
     return torch.load(f"{directory}/vec{vec_type}_layer_{layer}.pt")
 
 
-def generate_with_vector(model, questions, directory, saved_vector, example=None, question_type=""):
+def generate_with_vector(model, questions, directory, saved_vector, example=None, question_type="", temperature=0.0):
     if "vanilla" in question_type:
         layers = ["n/a"]
         multipliers = ["n/a"]
@@ -26,7 +26,7 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
     model.set_save_internal_decodings(False)
     all_results = []
 
-    batch_size = 32
+    batch_size = 8
     vec_type2name = {"": "activations", "_value": "value",
                      "_query": "query", "n/a": "n/a"}
     if "vanilla" in question_type:
@@ -76,7 +76,7 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
                     else:
                         batched_sources = None
                     generated_texts = model.generate_text(
-                        batched_questions, max_new_tokens=max_new_tokens)
+                        batched_questions, max_new_tokens=max_new_tokens, temperature=temperature)
 
                     for question, category, text in zip(batched_questions, batched_categories, generated_texts):
                         text = text.split("[/INST]")[-1].strip()

@@ -1,4 +1,5 @@
 import os
+import argparse
 import random
 import json
 import jsonlines
@@ -47,7 +48,18 @@ random.shuffle(QUESTIONS)
     
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Generate answers to questions.")
+    parser.add_argument('--question_set_id', type=int, default=0,
+                        help='Question set id to generate')
+    args = parser.parse_args()
     model = Llama7BChatHelper(token, system_prompt, generation=True)
-    output_folder_name = "generated_training"
+    output_folder_name = f"generated_training_{args.question_set_id}"
     os.makedirs(output_folder_name, exist_ok=True)
-    generate_with_vector(model, QUESTIONS, output_folder_name, saved_vector=False, question_type="vanilla_")
+    # split QUESTIONS into 8 parts
+    QUESTIONS_split = []
+    for i in range(8):
+        batch_size = int(len(QUESTIONS) / 8)
+        QUESTIONS_split.append(QUESTIONS[i * batch_size: min(len(QUESTIONS), (i + 1) * batch_size)])
+    # generate questions
+    generate_with_vector(model, QUESTIONS_split[args.question_set_id], output_folder_name, saved_vector=False, question_type="vanilla_", temperature=1.0)
