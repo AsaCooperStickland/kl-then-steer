@@ -233,20 +233,25 @@ class Llama7BChatHelper:
                                        )
         return dialog_tokens
 
-    def generate_text(self, prompts, max_new_tokens=50):
+    def generate_text(self, prompts, max_new_tokens=50, temperature=0.0):
         if type(prompts) == str:
             prompts = [prompts]
         prompts = [self.prompt_format(prompt) for prompt in prompts]
         tokens = self.tokenize_prompt(prompts).to(self.device)
-        return self.generate(tokens, max_new_tokens=max_new_tokens)
+        return self.generate(tokens, max_new_tokens=max_new_tokens, temperature=temperature)
 
-    def generate(self, tokens, max_new_tokens=50):
+    def generate(self, tokens, max_new_tokens=50, temperature=0.0):
         instr_pos = [find_instruction_end_postion(
             tokens.input_ids[i], self.END_STR) for i in range(len(tokens.input_ids))]
         self.set_after_positions(instr_pos)
-        generated = self.model.generate(
-            **tokens, max_new_tokens=max_new_tokens, top_k=1
-        )
+        if temperature > 0.0:
+            generated = self.model.generate(
+                **tokens, max_new_tokens=max_new_tokens, temperature=temperature,
+            )
+        else:
+            generated = self.model.generate(
+                **tokens, max_new_tokens=max_new_tokens, top_k=1
+            )
         if len(generated) > 1:
             return self.tokenizer.batch_decode(generated)
         else:
