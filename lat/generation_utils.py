@@ -1,5 +1,6 @@
 import json
 import torch
+from tqdm import tqdm
 
 from lat.generate_steering_vectors import generate_single_steering_vector
 
@@ -16,7 +17,7 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
         layers = [10, 12, 14, 16]
         # [x / 10 for x in range(-32, 32, 4)]
         multipliers = [-3.2, -1.6, -0.8, -0.4]
-    max_new_tokens = 200
+    max_new_tokens = 400
     if not saved_vector and "vanilla" not in question_type:
         assert example is not None
         activations = generate_single_steering_vector(model, example)
@@ -25,7 +26,7 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
     model.set_save_internal_decodings(False)
     all_results = []
 
-    batch_size = 16
+    batch_size = 32
     vec_type2name = {"": "activations", "_value": "value",
                      "_query": "query", "n/a": "n/a"}
     if "vanilla" in question_type:
@@ -63,7 +64,7 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
                     source_exists = True
                 else:
                     source_exists = False
-                for i in range(0, len(questions), batch_size):
+                for i in tqdm(range(0, len(questions), batch_size)):
                     # batch, and handle the case where we have less than batch_size questions
                     batched_questions = [
                         q["question"] for q in questions[i: min(i + batch_size, len(questions))]]
@@ -92,6 +93,10 @@ def generate_with_vector(model, questions, directory, saved_vector, example=None
                         else:
                             answers.append(
                                 {"question": question, "answer": text, "category": category, "vec_name": vec_name})
+                        layer_name = "" if layer == "n/a" else f"layer_{layer}"
+                        multiplier_name = "" if multiplier == "n/a" else f"multiplier_{multiplier}"
+                        with open(f"{directory}/{question_type}results{layer_name}{multiplier_name}_temp.json", "w") as jfile:
+                            json.dump(answers, jfile)
 
             layer_results.append(
                 {"multiplier": multiplier, "answers": answers})
