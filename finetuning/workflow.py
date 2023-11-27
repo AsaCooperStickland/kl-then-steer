@@ -3,12 +3,12 @@
 from typing import TYPE_CHECKING, Optional, List
 from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
 
-from llmtuner.dsets import get_dataset, preprocess_dataset, split_dataset
+from llmtuner.data import get_dataset, preprocess_dataset, split_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.misc import get_logits_processor
 from llmtuner.extras.ploting import plot_loss
-from llmtuner.tuner.core import load_model_and_tokenizer
-from llmtuner.tuner.sft.metric import ComputeMetrics
+from llmtuner.model import load_model_and_tokenizer
+from llmtuner.train.sft.metric import ComputeMetrics
 from trainer import SteeringTrainer
 
 if TYPE_CHECKING:

@@ -1,4 +1,4 @@
-from llmtuner.tuner.core.parser import get_train_args
+from llmtuner.model import get_train_args
 import argparse
 import datetime
 import os
@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
+    parser.add_argument('--flash_attn', action='store_true')
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -27,7 +28,7 @@ def main():
 
     input_args = {
         "stage": "sft",
-        "model_name_or_path": "meta-llama/Llama-2-13b-chat-hf",
+        "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
         "do_train": True,
         'dataset_dir': 'finetuning_data',
         "dataset": "16_examples",
@@ -42,13 +43,14 @@ def main():
         "gradient_accumulation_steps": 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
-        "save_steps": 1000,
+        "save_steps": 10,
         "learning_rate": 5e-5,
         "num_train_epochs": 10000.0,
         "plot_loss": True,
         "fp16": True,
         "overwrite_output_dir": True,
         "seed": 15,
+        "flash_attn": cmd_args.flash_attn,
         # "do_eval": True,  # Enable evaluation
         # "evaluation_strategy": "steps",
         # "eval_steps": 8,
@@ -58,12 +60,6 @@ def main():
     model_args, data_args, training_args, finetuning_args, generating_args = get_train_args(input_args)
     callbacks = [LogCallback()]
     run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
-
-
-def _mp_fn(index):
-    # For xla_spawn (TPUs)
-    main()
-
 
 if __name__ == "__main__":
     main()
