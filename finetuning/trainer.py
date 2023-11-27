@@ -16,9 +16,10 @@ from transformers.modeling_utils import unwrap_model
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 
 from tqdm import tqdm
+import random
 
 from repe import rep_control_reading_vec
-from llmtuner.tuner.sft.trainer import CustomSeq2SeqTrainer
+from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
 from steering import Steering
 
 
@@ -45,7 +46,9 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         self.wrapped_model.unwrap()
         self.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
         self.wrapped_model.reset()
-
+    
+    def sample_coeff(self):
+        return 3.0 if random.random() < 0.5 else 0.0
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -53,7 +56,8 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
 
         Subclass and override for custom behavior.
         """
-        activations = self.steering.get_shift(coeff=3.0, layer_id=self.layer_id)
+        coeff = self.sample_coeff()
+        activations = self.steering.get_shift(coeff=coeff, layer_id=self.layer_id)
         self.wrapped_model.reset()
         self.wrapped_model.set_controller(self.layer_id, activations, self.block_name)
         
