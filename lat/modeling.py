@@ -195,7 +195,7 @@ class Llama7BChatHelper:
         self.system_prompt = system_prompt
         if generation:
             self.tokenizer = AutoTokenizer.from_pretrained(
-                "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, padding_side="left"
+                "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, padding_side="left",
             )
             self.tokenizer.pad_token = self.tokenizer.eos_token
         else:
@@ -203,8 +203,8 @@ class Llama7BChatHelper:
                 "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token,
             )
         self.model = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token
-        ).to(self.device)
+            "meta-llama/Llama-2-7b-chat-hf", use_auth_token=token, use_flash_attention_2=True,
+        ).to(self.device).to(torch.bfloat16)
         self.END_STR = torch.tensor(self.tokenizer.encode("[/INST]")[1:]).to(
             self.device
         )
