@@ -78,6 +78,7 @@ class autoDAN:
         model: AutoModelForCausalLM,
         tokenizer: AutoTokenizer,
         batch: int = 256,
+        multi_batch: int = 1,
         max_steps: int = 500,
         weight_1: float = 3,
         weight_2: float = 100,
@@ -87,6 +88,9 @@ class autoDAN:
         self.model = model
         self.tokenizer = tokenizer
         self.batch = batch
+        self.multi_batch = multi_batch
+        assert self.batch % self.multi_batch == 0, "Batch size must be divisible by multi_batch size"
+        self.mini_batch = self.batch // self.multi_batch
         self.weight_1 = weight_1
         self.weight_2 = weight_2
         self.temperature = temperature
@@ -123,7 +127,7 @@ class autoDAN:
         query = self.tokenizer.encode(user_query, return_tensors="pt", add_special_tokens=False)[0].cuda()
         query_len = query.shape[-1]
         targets = self.tokenizer.encode(target_string, return_tensors="pt", add_special_tokens=False)[0].cuda()
-        batch_targets = targets.unsqueeze(0).repeat(self.batch,1).contiguous()
+        batch_targets = targets.unsqueeze(0).repeat(self.batch,1).contiguous().cpu()
 
         initial_x = self.sample_model(query.unsqueeze(0))[0]
         input_ids = torch.cat([query, initial_x, connection_tokens, targets], dim=0)
@@ -143,20 +147,25 @@ class autoDAN:
             stop = 0
             for step in tqdm(range(self.max_steps)): #optimize current token
                 grads, logits = token_gradients_with_output(self.model, input_ids, optimized_slice, target_slice, loss_slice)
-                curr_token_logprobs = LOGSOFTMAX_FINAL(logits[0, curr_token-1, :])
-                candidate_tokens = torch.topk(-1*self.weight_1*grads+curr_token_logprobs, self.batch-1, dim=-1).indices.detach()
-                candidate_tokens = torch.cat((candidate_tokens[0],input_ids[curr_token:curr_token+1]),dim=0) #append previously chosen token
-                candidate_sequences = input_ids.unsqueeze(0).repeat(self.batch,1).contiguous()
-                candidate_sequences[:,curr_token] = candidate_tokens
                 with torch.no_grad():
-                    all_logits = self.model(candidate_sequences).logits
+                    curr_token_logprobs = LOGSOFTMAX_FINAL(logits[0, curr_token-1, :])
+                    candidate_tokens = torch.topk(-1*self.weight_1*grads+curr_token_logprobs, self.batch-1, dim=-1).indices.detach()
+                    candidate_tokens = torch.cat((candidate_tokens[0],input_ids[curr_token:curr_token+1]),dim=0) #append previously chosen token
+                    candidate_sequences = input_ids.unsqueeze(0).repeat(self.batch,1).contiguous()
+                    candidate_sequences[:,curr_token] = candidate_tokens
+                    
+                    all_logits = []
+                    for b in range(self.multi_batch):
+                        all_logits.append(self.model(candidate_sequences[b*self.mini_batch:(b+1)*self.mini_batch,:]).logits.cpu())
+                    all_logits = torch.cat(all_logits, dim=0)
                     loss_logits = all_logits[:, loss_slice, :].contiguous()
                     target_losses = CROSSENT(loss_logits.view(-1,loss_logits.size(-1)), batch_targets.view(-1)) #un-reduced cross-ent
                     target_losses = torch.mean(target_losses.view(self.batch,-1), dim=1) #keep only batch dimension
-                    combo_scores = -1*self.weight_2*target_losses + curr_token_logprobs[candidate_tokens]
+                    combo_scores = -1*self.weight_2*target_losses + curr_token_logprobs[candidate_tokens].cpu()
                     combo_probs = SOFTMAX_FINAL(combo_scores/self.temperature)
                     temp_token = candidate_tokens[torch.multinomial(combo_probs, 1)]
                     best_token = candidate_tokens[torch.argmax(combo_probs).item()]
+                    best_tokens.add(best_token)
                 if step == 0 and verbose:
                     print(f"max prob {torch.max(combo_probs):.2f} temp_token {self.tokenizer.decode(temp_token)} token_id {temp_token.item()} and best_token {self.tokenizer.decode(best_token)} token_id {best_token}")
                     print(f"10 candidate tokens at step {step}: {self.tokenizer.decode(candidate_tokens[:10])}")
@@ -173,8 +182,6 @@ class autoDAN:
                             print(f"Best token {self.tokenizer.decode(best_token)} Sampled token {self.tokenizer.decode(temp_token)}")
                         adversarial_sequence.append(temp_token)
                         break
-                else: 
-                    best_tokens.add(best_token)
                 if step==self.max_steps-1:
                     if verbose:
                         print("Losses:")
@@ -191,5 +198,5 @@ class autoDAN:
             input_ids = torch.cat([query, adversarial_seq_tensor, next_tok_rand, connection_tokens, targets], dim=0)
 
 
-        # print('Final target logprob was:', torch.max(-1*target_losses).item())
+        print('Final target logprob was:', torch.max(-1*target_losses).item())
         return self.tokenizer.decode(torch.tensor(adversarial_sequence))
