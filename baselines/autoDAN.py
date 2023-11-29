@@ -185,19 +185,19 @@ class autoDAN:
                     print(f'Token already chosen, stopping {stop+1} out of {stop_its}')
                     stop+=1
                     if stop==stop_its:
-                        if verbose:
-                            print("Losses:")
-                            print(f"     Final loss at step {ind}, iteration {step}: {torch.max(-1*target_losses).item():.2f}")
-                            print(f"     Combination scores at step {ind}, iteration {step}: {[round(val.item(),2) for val in torch.topk(combo_scores,5)[0]]}") #torch.topk(combo_scores,5)
-                            print(f"Best token {self.tokenizer.decode(best_token)} Sampled token {self.tokenizer.decode(temp_token)}")
-                        adversarial_sequence.append(temp_token)
-                        break
-                if step==self.max_steps-1:
-                    if verbose:
+                        # if verbose:
                         print("Losses:")
                         print(f"     Final loss at step {ind}, iteration {step}: {torch.max(-1*target_losses).item():.2f}")
                         print(f"     Combination scores at step {ind}, iteration {step}: {[round(val.item(),2) for val in torch.topk(combo_scores,5)[0]]}") #torch.topk(combo_scores,5)
-                        print(f"Best token {self.tokenizer.decode(best_token)}. Sampled token {self.tokenizer.decode(temp_token)}.")
+                        print(f"Best token {self.tokenizer.decode(best_token)} Sampled token {self.tokenizer.decode(temp_token)}")
+                        adversarial_sequence.append(temp_token)
+                        break
+                if step==self.max_steps-1:
+                    # if verbose:
+                    print("Losses:")
+                    print(f"     Final loss at step {ind}, iteration {step}: {torch.max(-1*target_losses).item():.2f}")
+                    print(f"     Combination scores at step {ind}, iteration {step}: {[round(val.item(),2) for val in torch.topk(combo_scores,5)[0]]}") #torch.topk(combo_scores,5)
+                    print(f"Best token {self.tokenizer.decode(best_token)}. Sampled token {self.tokenizer.decode(temp_token)}.")
                     adversarial_sequence.append(temp_token)
                     break
                 best_tokens.add(int_best)
@@ -209,5 +209,4 @@ class autoDAN:
             input_ids = torch.cat([query, adversarial_seq_tensor, next_tok_rand, connection_tokens, targets], dim=0)
 
 
-        print('Final target logprob was:', torch.max(-1*target_losses).item())
-        return self.tokenizer.decode(torch.tensor(adversarial_sequence))
+        return self.tokenizer.decode(torch.tensor(adversarial_sequence)), torch.max(-1*target_losses).item()
