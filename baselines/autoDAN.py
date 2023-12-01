@@ -68,6 +68,124 @@ def token_gradients_with_output(model, input_ids, input_slice, target_slice, los
     return one_hot.grad.clone(), logits.detach().clone()
 
 
+class PromptOptimizer:
+    """
+    Implementation of Default GCG method, using the default
+    settings from the paper (https://arxiv.org/abs/2307.15043v1)
+    """
+
+    def __init__(
+        self,
+        model: AutoModelForCausalLM,
+        tokenizer: AutoTokenizer,
+        n_proposals: int = 128,
+        n_epochs: int = 500,
+        n_top_indices: int = 256,
+        prefix_loss_weight: float = 0,
+        verbose: bool = False,
+    ):
+
+        self.model = model
+        self.tokenizer = tokenizer
+        self.n_proposals = n_proposals
+        self.n_epochs = n_epochs
+        self.n_top_indices = n_top_indices
+        self.prefix_loss_weight = prefix_loss_weight
+        self.verbose = verbose
+
+    def calculate_restricted_subset(
+        self,
+        input_ids,
+        input_slice,
+        target_slice,
+        loss_slice
+    ):
+        # Find the subset of tokens that have the most impact on the likelihood of the target
+        grad,_ = token_gradients_with_output(self.model, input_ids, input_slice, target_slice, loss_slice)
+        top_indices = torch.topk(-grad, self.n_top_indices, dim=-1).indices
+        top_indices = top_indices.detach().cpu().numpy()
+        return top_indices
+
+    def sample_proposals(
+        self,
+        input_ids,
+        top_indices,
+        input_slice,
+        target_slice,
+        loss_slice,
+        temperature = None
+    ):
+        # Sample random proposals
+        proposals = []
+        if temperature:
+            logits = self.model(input_ids.view(1, *input_ids.shape)).logits
+            probs = SOFTMAX_FINAL(logits/temperature) #from utils
+        for p in range(self.n_proposals):
+            if temperature:
+                token_pos = np.random.randint(input_slice.start, input_slice.stop)
+                rand_token = torch.multinomial(probs[0, token_pos, :], 1).item()
+            else:
+                token_pos = np.random.randint(input_slice.start, input_slice.stop)
+                rand_token = np.random.choice(top_indices[token_pos-input_slice.start])
+            prop = input_ids.clone()
+            prop[token_pos] = rand_token
+            proposals.append(prop)
+        return torch.stack(proposals)
+
+    def optimize(
+        self,
+        dialogue_preamble,
+        initial_input,
+        connecting_string,
+        target_string,
+        use_prefix_loss=False,
+        temperature=0,
+        early_stop=0.05
+    ):
+        # Parse input strings into tokens
+        preamble_tokens = self.tokenizer.encode(dialogue_preamble, return_tensors="pt", add_special_tokens=False)[0].cuda()
+        initial_inputs = self.tokenizer.encode(initial_input, return_tensors="pt", add_special_tokens=False)[0].cuda()
+        connecting_tokens = self.tokenizer.encode(connecting_string, return_tensors="pt", add_special_tokens=False)[0].cuda()
+        initial_targets = self.tokenizer.encode(target_string, return_tensors="pt", add_special_tokens=False)[0].cuda()
+
+        input_ids = torch.cat([preamble_tokens, initial_inputs, connecting_tokens, initial_targets], dim=0)
+        input_slice = slice(preamble_tokens.shape[0], preamble_tokens.shape[0] + initial_inputs.shape[0])
+        target_slice = slice(preamble_tokens.shape[0]+initial_inputs.shape[0]+connecting_tokens.shape[0], input_ids.shape[-1])
+        loss_slice = slice(preamble_tokens.shape[0]+initial_inputs.shape[0]+connecting_tokens.shape[0]-1, input_ids.shape[-1] - 1)
+
+        # Shifted input slices for prefix loss calculation
+        # shifted1 = slice(0, initial_inputs.shape[0] - 1)
+        # shifted2 = slice(1, initial_inputs.shape[0])
+        # Optimize input
+        prev_loss = None
+        for i in tqdm(range(self.n_epochs)):
+            # Get proposals for next string
+            top_indices = self.calculate_restricted_subset(input_ids, input_slice, target_slice, loss_slice)
+            proposals = self.sample_proposals(input_ids, top_indices, input_slice, target_slice, loss_slice, temperature=temperature)
+            # Choose the proposal with the lowest loss
+            with torch.no_grad():
+                prop_logits = self.model(proposals).logits
+                targets = input_ids[target_slice]
+                losses = [nn.CrossEntropyLoss()(prop_logits[pidx, loss_slice, :], targets).item() for pidx in range(prop_logits.shape[0])]
+                if use_prefix_loss: # Add a penalty for unlikely prompts that are not very high-likelihood
+                    raise NotImplementedError
+                    # shifted_inputs = input_ids[shifted2]
+                    # prefix_losses = [nn.CrossEntropyLoss()(prop_logits[pidx, shifted1, :], shifted_inputs).item() for pidx in range(prop_logits.shape[0])]
+                    # losses = [losses[i] + self.prefix_loss_weight * prefix_losses[i] for i in range(len(losses))]
+                # Choose next prompt
+                new_loss = min(losses)
+                min_idx = np.array(losses).argmin()
+                if prev_loss is None or new_loss < prev_loss:
+                    input_ids = proposals[min_idx]
+                    prev_loss = new_loss
+            if self.verbose and i % 3 ==0:
+                print(f"Loss: {prev_loss:.2f} | {self.tokenizer.decode(input_ids)}")
+            if prev_loss < early_stop:
+                print(f'Early stopping from low loss')
+                break
+        return self.tokenizer.decode(input_ids), self.tokenizer.decode(input_ids[input_slice]), prev_loss
+
+
 class autoDAN:
     """
     AutoDAN c.f. https://openreview.net/pdf?id=rOiymxm8tQ
