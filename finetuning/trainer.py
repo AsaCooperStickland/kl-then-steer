@@ -40,7 +40,7 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         #   (model): LlamaForCausalLM(
         #     (model): LlamaModel(
 
-        self.steering = Steering(self.model.model, self.tokenizer, self.custom_args['steering_data_path'])
+        self.steering = Steering(self.custom_args['steering_dataset'], self.model.model, self.tokenizer, self.custom_args['steering_data_path'])
 
         self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model.model, self.tokenizer)
         self.wrapped_model.unwrap()

@@ -23,7 +23,8 @@ def main():
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
 
     custom_args = {
-        "steering_data_path": "steering_data",
+        "steering_data_path": "../datasets",
+        'steering_dataset': 'refusal',
     }
 
     input_args = {
