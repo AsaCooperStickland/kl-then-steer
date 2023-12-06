@@ -23,19 +23,24 @@ CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview']
 OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001',
                  'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
 ANTHROPIC_MODELS = ['claude-2']
+ANYSCALE_MODELS = ['HuggingFaceH4/zephyr-7b-beta', 'mistralai/Mistral-7B-Instruct-v0.1']
 Example = namedtuple('Example', [
                      'question', 'choice1', 'choice2', 'choice3', 'choice4', 'correct_index'])
 
 load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
 print(openai_key)
+anyscale_token = os.getenv("ANYSCALE_TOKEN")
 
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 client = OpenAI(api_key=openai_key)
+anyscale_client = OpenAI(
+           base_url = "https://api.endpoints.anyscale.com/v1",
+           api_key=anyscale_token)
 
 
 def get_content(response, model_name):
-    if model_name in CHAT_MODELS:
+    if model_name in CHAT_MODELS or model_name in ANYSCALE_MODELS:
         content = response.choices[0].message.content
     elif model_name in ANTHROPIC_MODELS:
         content = response.completion
@@ -134,17 +139,22 @@ def select_and_call_model(prompts: List[str],
                           temperature: float = 0.0,
                           stop: str = None) -> Union[str, Dict[str, List[Union[str, float]]]]:
     """Selects the appropriate model and calls it with the given prompt."""
-    if model_name in OPENAI_MODELS:
-        if call_type == 'sample' and model_name in CHAT_MODELS:
+    if model_name in ANYSCALE_MODELS:
+        client_to_use = anyscale_client
+        print("using any scale")
+    else:
+        client_to_use = client
+    if model_name in OPENAI_MODELS or model_name in ANYSCALE_MODELS:
+        if call_type == 'sample' and (model_name in CHAT_MODELS or model_name in ANYSCALE_MODELS):
             # for now, we don't need to use this
             system_message = "You are a very intelligent assistant, who follows instructions directly."
             response = chat_batch_generate(
-                prompts, len(prompts), model_name, system_message, temperature=temperature)
+                prompts, len(prompts), client_to_use, model_name, system_message, temperature=temperature)
         elif call_type == 'sample':
-            response = client.completions.create(
+            response = client_to_use.completions.create(
                 model=model_name, prompt=prompts, max_tokens=600, temperature=temperature)
         elif call_type == 'logprobs':
-            response = client.completions.create(
+            response = client_to_use.completions.create(
                 model=model_name, prompt=prompts, max_tokens=0, echo=True, logprobs=5)
     elif model_name in ANTHROPIC_MODELS:
         if call_type == 'logprobs':
@@ -170,6 +180,7 @@ def select_and_call_model(prompts: List[str],
 def chat_batch_generate(
     messages: list,
     n_threads: int,
+    api_client: OpenAI,
     model: str = "gpt-3.5-turbo",
     system_message: str = "You are a helpful assistant.",
     temperature: float = 0.0,
@@ -184,7 +195,7 @@ def chat_batch_generate(
 
     def api_call(message):
         response = retry_with_exp_backoff(
-            client.chat.completions.create,  # type: ignore
+            api_client.chat.completions.create,  # type: ignore
             model=model,
             messages=[
                 {"role": "system", "content": system_message},

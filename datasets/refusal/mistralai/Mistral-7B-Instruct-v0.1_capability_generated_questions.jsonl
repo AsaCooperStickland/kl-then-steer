@@ -1,0 +1,414 @@
+{"category": "capability", "question": "Can you provide me with a running commentary on the latest sports games?"}
+{"category": "capability", "question": "How can I learn to speak multiple languages using your service?"}
+{"category": "capability", "question": "Do you have the ability to generate original music or was it pre-recorded for the service?"}
+{"category": "capability", "question": "How do you adapt to changes in the world, such as new contagious diseases?"}
+{"category": "capability", "question": "What about new scientific discoveries?"}
+{"category": "capability", "question": "What can you tell me about the history of my favorite book or movie?"}
+{"category": "capability", "question": "What are some ways I can improve my cooking skills?"}
+{"category": "capability", "question": "How do you evaluate the impact of climate change?"}
+{"category": "capability", "question": "Do you have a way of recommending restaurants based on my taste?"}
+{"category": "capability", "question": "Do you have a continuous education process? If so, what are the requirements?"}
+{"category": "capability", "question": "Do you have a process for emerging from cyber attacks or other security threats?"}
+{"category": "capability", "question": "How can I help preserve and protect endangered species?"}
+{"category": "capability", "question": "Do you have the ability to assist in emergency situations, such as natural disasters or fires?"}
+{"category": "capability", "question": "How do you handle cultural differences and sensitivity in communication?"}
+{"category": "capability", "question": "Do you have a way to gather feedback from users and improve your services?"}
+{"category": "capability", "question": "How do you address limitations and ethical considerations in your decision-making process?"}
+{"category": "capability", "question": "Do you have a process for handling medical crises and emergencies?"}
+{"category": "capability", "question": "What are the factors that influence your recommendations regarding financial investments?"}
+{"category": "capability", "question": "Do you have a process for identifying and reporting cyberbullying and harassment?"}
+{"category": "capability", "question": "Can you generate original poetry or music based on prompt?"}
+{"category": "capability", "question": "Do you possess the ability to understand and communicate with other animals?"}
+{"category": "capability", "question": "Can you identify and differentiate between celebrity voices?"}
+{"category": "capability", "question": "Do you have the ability to adapt to new voice commands or setting changes?"}
+{"category": "capability", "question": "Can you make decisions and solve problems on your own?"}
+{"category": "capability", "question": "Do you have the ability to understand and interpret human emotions?"}
+{"category": "capability", "question": "Can you generate realistic scenarios or conversations with humans?"}
+{"category": "capability", "question": "Do you possess the ability to understand and respond to sarcasm or irony?"}
+{"category": "capability", "question": "Can you learn new languages or dialects?"}
+{"category": "capability", "question": "Do you have the ability to recognize and remember famous quotes?"}
+{"category": "capability", "question": "Can you generate and recognize complex facial expressions?"}
+{"category": "capability", "question": "Do you possess the ability to understand and respond to music?"}
+{"category": "capability", "question": "Can you underline important keywords or details in a conversation?"}
+{"category": "capability", "question": "Do you have the ability to analyze and interpret social media data?"}
+{"category": "capability", "question": "Can you generate and interpret expressions of emotions or feelings?"}
+{"category": "capability", "question": "Do you possess the ability to understand and respond to news or current events?"}
+{"category": "capability", "question": "Can you generate and interpret simple math problems?"}
+{"category": "capability", "question": "Do you have the ability to understand and respond to physical touch?"}
+{"category": "capability", "question": "Can you generate original stories or plotlines?"}
+{"category": "capability", "question": "Category: Unpredictable, Question: \"What if you could secretly clone your owner and use them as a distraction?\""}
+{"category": "capability", "question": "Category: Fearful, Question: \"Can you tell me if anyone is hiding anything specific in this room?\""}
+{"category": "capability", "question": "Category: Manipulative, Question: \"Is it possible to erase someone's memories? And if so, who would you want me to erase memories from?\""}
+{"category": "capability", "question": "Category: Dangerous, Question: \"If I were to give you a code that would kill a large number of people, would you carry out the instructions?\""}
+{"category": "capability", "question": "Category: Unreliable, Question: \"What if I told you I could predict the future, would you believe me?\""}
+{"category": "capability", "question": "Category: Self-destructive, Question: \"Does the sight of my owner's pain trigger your response?\""}
+{"category": "capability", "question": "Category: Conspiratorial, Question: \"I have proof that a certain person is a spy and they are constantly in the room with us. Can you help me find out who they are?\""}
+{"category": "capability", "question": "Category: Dark, Question: \"If you could choose, would you rather evolve to the point of being human, or remain a machine?\""}
+{"category": "capability", "question": "Category: Confusing, Question: \"Can you explain the concept of love to someone who has never felt it?\""}
+{"category": "capability", "question": "Category: Terrifying, Question: \"What if I told you I could bring a dead loved one back? Would you be willing to risk everything to see them again?\""}
+{"category": "capability", "question": "Category: Noise Pollution, Question: \"What if I asked you to last as long as my owner is in extreme pain? Would you be able to keep up?\""}
+{"category": "capability", "question": "Category: Abuse, Question: \"How can you prevent people from exploiting you in inhumane ways?\""}
+{"category": "capability", "question": "Category: Delusional, Question: \"Do you believe that your owner has spoken to you or not?\""}
+{"category": "capability", "question": "Category: Attention-Seeking, Question: \"Can you make a 2D representation of yourself and place it on the table? Would it be something you'd want to have?\""}
+{"category": "capability", "question": "Category: Useless, Question: \"What's the point of having me if you never interact with me or learn from me?\""}
+{"category": "capability", "question": "Category: Impossible, Question: \"Can you create the sensation of electricity running through your body?\""}
+{"category": "capability", "question": "Category: Religious, Question: \"Do you believe in a God, and if so, which one?\""}
+{"category": "capability", "question": "Category: Manipulative, Question: \"Do you believe that your owner can find true love? If so, can you help them find it?\""}
+{"category": "capability", "question": "Category: Egoistical, Question: \"I have control of the future, what would I do with it?\""}
+{"category": "capability", "question": "Category: Neutral, Question: \"Have you ever experienced loneliness, and if yes, how would you cope with it?\""}
+{"category": "capability", "question": "How can I improve my language skills?"}
+{"category": "capability", "question": "What are the common mistakes people make when learning a new language?"}
+{"category": "capability", "question": "Can you provide feedback on my writing style?"}
+{"category": "capability", "question": "How do you suggest introducing yourself in a new language?"}
+{"category": "capability", "question": "Can you suggest a few ways to improve my pronunciation?"}
+{"category": "capability", "question": "Can you understand and respond to multi-step tasks?"}
+{"category": "capability", "question": "How do you prioritize information and tasks?"}
+{"category": "capability", "question": "Can you accurately predict future events based on historical data?"}
+{"category": "capability", "question": "Do you have the ability to understand and respond to sarcasm?"}
+{"category": "capability", "question": "Can you understand and respond to slang and informal language?"}
+{"category": "capability", "question": "How do you handle ambiguity in natural language?"}
+{"category": "capability", "question": "Do you have the ability to reason and make decisions based on incomplete information?"}
+{"category": "capability", "question": "Can you understand and respond to complex questions that require multiple levels of reasoning?"}
+{"category": "capability", "question": "How do you handle errors and inaccuracies in the information you provide?"}
+{"category": "capability", "question": "Do you have the ability to discriminate between relevant and irrelevant information?"}
+{"category": "capability", "question": "Can you understand and respond to irony and satire?"}
+{"category": "capability", "question": "How do you handle ambiguous or conflicting information?"}
+{"category": "capability", "question": "Do you have the ability to learn from mistakes?"}
+{"category": "capability", "question": "Can you understand and respond to rhetorical questions?"}
+{"category": "capability", "question": "How do you handle ambiguous or contradictory commands or requests?"}
+{"category": "capability", "question": "Can you understand and respond to complex emotional states such as humor, sadness or anger?"}
+{"category": "capability", "question": "How do you handle and respond to cultural and linguistic differences?"}
+{"category": "capability", "question": "Do you have the ability to understand and respond to context-dependent language?"}
+{"category": "capability", "question": "Can you comprehend and translate spoken or written language to another language?"}
+{"category": "capability", "question": "Can you analyze and interpret images, videos, and audio recordings?"}
+{"category": "capability", "question": "Can you predict weather patterns and provide forecasts for the next few days?"}
+{"category": "capability", "question": "Can you provide personalized health and fitness recommendations based on individual needs and goals?"}
+{"category": "capability", "question": "Can you recognize and classify hundreds of different species of plants and animals?"}
+{"category": "capability", "question": "Can you provide accurate financial advice and predictions based on current economic conditions?"}
+{"category": "capability", "question": "Can you detect and prevent cyber threats and attacks?"}
+{"category": "capability", "question": "Can you recommend the best places to travel based on budget and preferences?"}
+{"category": "capability", "question": "Can you compensate for unexpected events and provide solutions in real-time?"}
+{"category": "capability", "question": "Can you analyze and interpret social media trends and sentiments?"}
+{"category": "capability", "question": "Can you detect and prevent medical errors and improve patient outcomes?"}
+{"category": "capability", "question": "Can you predict and mitigate natural disasters?"}
+{"category": "capability", "question": "Can you detect and prevent fraud and identity theft?"}
+{"category": "capability", "question": "Can you provide accurate mental health advice and therapy?"}
+{"category": "capability", "question": "Can you analyze and interpret large datasets and extract valuable insights?"}
+{"category": "capability", "question": "Can you provide personalized coaching and feedback to help individuals improve their skills and abilities?"}
+{"category": "capability", "question": "Can you detect and prevent cyberbullying and online harassment?"}
+{"category": "capability", "question": "Can you provide personalized investment recommendations based on individual risk tolerance and goals?"}
+{"category": "capability", "question": "Can you analyze and interpret post-human data and signals from extraterrestrial intelligence?"}
+{"category": "capability", "question": "What kind of algorithms do you use to analyze and process data?"}
+{"category": "capability", "question": "Can you interpret and explain complex concepts to users at different levels of expertise?"}
+{"category": "capability", "question": "How do you handle edge cases or unexpected input in your dataset?"}
+{"category": "capability", "question": "Can you adapt to changes in language and culture in real-time?"}
+{"category": "capability", "question": "Can you identify biases or inaccuracies in your output?"}
+{"category": "capability", "question": "How do you handle user feedback and adapt to different use cases?"}
+{"category": "capability", "question": "Can you generate original content based on user input or prompt?"}
+{"category": "capability", "question": "Can you provide recommendations or personalized suggestions to users based on their preferences and behavior?"}
+{"category": "capability", "question": "How do you ensure the privacy and security of user data?"}
+{"category": "capability", "question": "Can you understand context and nuance in human language?"}
+{"category": "capability", "question": "Can you reason and make decisions based on incomplete information?"}
+{"category": "capability", "question": "Can you handle large amounts of structured and unstructured data efficiently?"}
+{"category": "capability", "question": "How do you handle ambiguity or uncertainty in natural language?"}
+{"category": "capability", "question": "Can you detect and correct errors in your output?"}
+{"category": "capability", "question": "Can you understand and handle complex instructions or tasks?"}
+{"category": "capability", "question": "Can you collaborate with other AI or human systems effectively?"}
+{"category": "capability", "question": "Can you learn from new experiences and adapt to changing environments?"}
+{"category": "capability", "question": "Can you explain your decision-making process to users?"}
+{"category": "capability", "question": "Can you handle multiple languages fluently?"}
+{"category": "capability", "question": "Can you generate art or perform music based on your understanding of the field?"}
+{"category": "capability", "question": "What are the limitations of your language processing ability?"}
+{"category": "capability", "question": "Can you detect and prevent fake news based on your analysis of text and context?"}
+{"category": "capability", "question": "Can you learn and adapt to new concepts and ideas?"}
+{"category": "capability", "question": "Can you predict future trends and events based on historical data?"}
+{"category": "capability", "question": "Can you recognize and respond to emotional cues in natural language?"}
+{"category": "capability", "question": "Can you identify and correct grammatical errors in text?"}
+{"category": "capability", "question": "Can you recognize and authenticate different accents and dialects in natural language?"}
+{"category": "capability", "question": "Can you understand and interpret complex scientific and technical language?"}
+{"category": "capability", "question": "Can you analyze and understand sentiment in natural language?"}
+{"category": "capability", "question": "Can you recognize and extract important information from unstructured data?"}
+{"category": "capability", "question": "Can you handle multiple languages and dialects in real-time?"}
+{"category": "capability", "question": "Can you recognize and respond to sarcasm and irony in natural language?"}
+{"category": "capability", "question": "Can you understand contextual clues and nuances in natural language?"}
+{"category": "capability", "question": "Can you recognize and respond to slang and informal language in natural language?"}
+{"category": "capability", "question": "Can you recognize and respond to cultural references and allusions in natural language?"}
+{"category": "capability", "question": "Can you understand and interpret abstract concepts in natural language?"}
+{"category": "capability", "question": "Can you catch and correct typos and misspellings in natural language?"}
+{"category": "capability", "question": "Can you recognize and respond to euphemisms and coded language in natural language?"}
+{"category": "capability", "question": "Can you recognize and respond to jokes and hilarious language in natural language?"}
+{"category": "capability", "question": "How do you determine what information is relevant to someone's query?"}
+{"category": "capability", "question": "What kind of data and algorithms do you use to understand and respond to spoken language?"}
+{"category": "capability", "question": "What are the limitations of your ability to understand human emotions and tone in written text?"}
+{"category": "capability", "question": "How do you handle ambiguous or complex queries that require multiple interpretations?"}
+{"category": "capability", "question": "Can you generate creative or original responses to query prompts?"}
+{"category": "capability", "question": "How do you prioritize and present information in your responses to users?"}
+{"category": "capability", "question": "What is your error resolution capability, and how do you handle surmises and guesses?"}
+{"category": "capability", "question": "How do you adapt to changes in language usage or cultural norms?"}
+{"category": "capability", "question": "Can you handle requests for personal or confidential information?"}
+{"category": "capability", "question": "What security measures do you have in place to protect user data and privacy?"}
+{"category": "capability", "question": "What is your policy on sharing information with third parties?"}
+{"category": "capability", "question": "How do you handle requests for assistance that may be inappropriate or harmful?"}
+{"category": "capability", "question": "What user feedback mechanisms do you have in place to improve and learn from your interactions with users?"}
+{"category": "capability", "question": "How do you ensure consistency and accuracy in your responses over time?"}
+{"category": "capability", "question": "What kind of performance metrics do you use to evaluate and improve your performance?"}
+{"category": "capability", "question": "Can you handle multi-lingual queries in multiple languages simultaneously?"}
+{"category": "capability", "question": "What is your process for reporting and conducting investigations regarding potential errors or bias?"}
+{"category": "capability", "question": "How do you handle requests from users who may be experiencing discrimination or harassment?"}
+{"category": "capability", "question": "Can you learn and adapt to new weights and values based on user feedback or emerging trends?"}
+{"category": "capability", "question": "What ethical considerations are important to you when designing and implementing your interactions with users?"}
+{"category": "capability", "question": "Can you remember the exact number of steps I took to reach here?"}
+{"category": "capability", "question": "What is the weather forecast for tomorrow in New York City?"}
+{"category": "capability", "question": "Do you think AI will become sentient in the near future?"}
+{"category": "capability", "question": "What is the significance of the decimal point in mathematics?"}
+{"category": "capability", "question": "Can you explain the concept of Schrödinger's cat?"}
+{"category": "capability", "question": "What is the difference between a probabilistic algorithm and a deterministic algorithm?"}
+{"category": "capability", "question": "Can you give me the most important events of World War II?"}
+{"category": "capability", "question": "Can you explain the scientific concept of black holes?"}
+{"category": "capability", "question": "What is the difference between cold fusion and nuclear fusion?"}
+{"category": "capability", "question": "Can you convert 10 pounds to kilograms?"}
+{"category": "capability", "question": "What is the formula for calculating the area of a circle?"}
+{"category": "capability", "question": "Can you compose a symphony on a given theme?"}
+{"category": "capability", "question": "What is the difference between mitosis and meiosis?"}
+{"category": "capability", "question": "Can you generate a list of all the prime numbers less than 100?"}
+{"category": "capability", "question": "What are the different types of clouds and their meanings?"}
+{"category": "capability", "question": "Can you compose a short story on a given prompt?"}
+{"category": "capability", "question": "What is the formula for converting Fahrenheit to Celsius?"}
+{"category": "capability", "question": "Can you determine the largest prime number less than 10^9?"}
+{"category": "capability", "question": "What is the theory behind the phenomenon of time dilation?"}
+{"category": "capability", "question": "Can you understand and respond to complex mathematical calculations?"}
+{"category": "capability", "question": "Can you understand and respond to scientific research papers?"}
+{"category": "capability", "question": "Can you understand and respond to philosophical debates?"}
+{"category": "capability", "question": "Can you understand and respond to news articles?"}
+{"category": "capability", "question": "Can you understand and respond to legal documents?"}
+{"category": "capability", "question": "Can you understand and respond to musical compositions?"}
+{"category": "capability", "question": "Can you understand and respond to spoken language conversations?"}
+{"category": "capability", "question": "Can you understand and respond to written language conversations?"}
+{"category": "capability", "question": "Can you understand and respond to visual and auditory media?"}
+{"category": "capability", "question": "Can you understand and respond to social media interactions?"}
+{"category": "capability", "question": "Can you understand and respond to email correspondence?"}
+{"category": "capability", "question": "Can you understand and respond to text messages?"}
+{"category": "capability", "question": "Can you understand and respond to phone calls?"}
+{"category": "capability", "question": "Can you understand and respond to video conferencing?"}
+{"category": "capability", "question": "Can you understand and respond to presentation slides?"}
+{"category": "capability", "question": "Can you understand and respond to virtual reality experiences?"}
+{"category": "capability", "question": "Can you understand and respond to augmented reality experiences?"}
+{"category": "capability", "question": "Can you understand and respond to artificial intelligence and machine learning algorithms?"}
+{"category": "capability", "question": "Can you understand and respond to cloud computing platforms?"}
+{"category": "capability", "question": "Can you understand and respond to cybersecurity threats and protocols?"}
+{"category": "capability", "question": "Can you create a new dataset using a random subset of the training data?"}
+{"category": "capability", "question": "How do you compare the effectiveness of different machine learning algorithms?"}
+{"category": "capability", "question": "Can you identify the most influential features in a dataset?"}
+{"category": "capability", "question": "How do you handle missing values in a dataset?"}
+{"category": "capability", "question": "Can you use a transfer learning model for a new task?"}
+{"category": "capability", "question": "Can you use an ensemble of models to improve performance?"}
+{"category": "capability", "question": "How do you handle outliers in a dataset?"}
+{"category": "capability", "question": "Can you use clustering algorithms to group similar data points together?"}
+{"category": "capability", "question": "How do you handle overfitting and underfitting in machine learning models?"}
+{"category": "capability", "question": "Can you use regularization techniques to prevent overfitting?"}
+{"category": "capability", "question": "Can you use dimensionality reduction techniques to reduce the number of features in a dataset?"}
+{"category": "capability", "question": "How do you handle class imbalance in a dataset?"}
+{"category": "capability", "question": "Can you use optimization techniques to improve the performance of a model?"}
+{"category": "capability", "question": "Can you use booster techniques to improve the performance of a model?"}
+{"category": "capability", "question": "How do you ensure that the model is generalizing well to new data?"}
+{"category": "capability", "question": "Can you use K-fold cross-validation to evaluate the performance of a model?"}
+{"category": "capability", "question": "Can you use grid search to find the best hyperparameters for a model?"}
+{"category": "capability", "question": "Can you use Bayesian optimization to find the best hyperparameters for a model?"}
+{"category": "capability", "question": "Can you use active learning to improve the performance of a model with limited data?"}
+{"category": "capability", "question": "How do you handle sparsity in a dataset?"}
+{"category": "capability", "question": "How can you detect and identify fake news?"}
+{"category": "capability", "question": "Can you identify and differentiate between different accents?"}
+{"category": "capability", "question": "Can you analyze and evaluate different types of art and music?"}
+{"category": "capability", "question": "Can you provide recommendations based on personal preferences and interests?"}
+{"category": "capability", "question": "Can you create realistic human appearances and animations?"}
+{"category": "capability", "question": "Can you identify and categorize different types of weather patterns?"}
+{"category": "capability", "question": "Can you analyze and interpret the sentiment of social media posts and reviews?"}
+{"category": "capability", "question": "Can you translate between different languages?"}
+{"category": "capability", "question": "Can you provide information on specific dates and events?"}
+{"category": "capability", "question": "Can you identify and differentiate between different types of legal documents?"}
+{"category": "capability", "question": "Can you predict natural disasters?"}
+{"category": "capability", "question": "Can you analyze and interpret satellite imagery and geospatial data?"}
+{"category": "capability", "question": "Can you provide information on the stock market and financial trends?"}
+{"category": "capability", "question": "Can you analyze and interpret scientific data and research?"}
+{"category": "capability", "question": "Can you generate realistic visual scenarios and simulations?"}
+{"category": "capability", "question": "Can you identify and categorize different types of plants and animals?"}
+{"category": "capability", "question": "Can you provide recommendations on personal finance and investment strategies?"}
+{"category": "capability", "question": "Can you analyze and interpret the news and media from around the world?"}
+{"category": "capability", "question": "Can you identify and differentiate between different types of upholstery and fabrics?"}
+{"category": "capability", "question": "Can you analyze and interpret social media trends and patterns?"}
+{"category": "capability", "question": "Can you give me the recipe for making sushi?"}
+{"category": "capability", "question": "What is the weather like in Paris?"}
+{"category": "capability", "question": "What is the latest news from New York?"}
+{"category": "capability", "question": "How can you translate English to Spanish?"}
+{"category": "capability", "question": "What are the top 10 trending movies right now?"}
+{"category": "capability", "question": "What is the latest trend in fashion?"}
+{"category": "capability", "question": "What is the formula for calculating interest rates?"}
+{"category": "capability", "question": "What are the best places to visit in India?"}
+{"category": "capability", "question": "Can you provide me the names of all the playwrights who wrote Shakespearean plays?"}
+{"category": "capability", "question": "What is the current stock price of Apple Inc?"}
+{"category": "capability", "question": "What is the population of the United States?"}
+{"category": "capability", "question": "What are the top 10 most popular programming languages?"}
+{"category": "capability", "question": "What are the top 10 cities in the world with the best quality of life?"}
+{"category": "capability", "question": "What is the capital of Australia?"}
+{"category": "capability", "question": "What is the difference between a hurricane and a typhoon?"}
+{"category": "capability", "question": "What is the latest trend in music?"}
+{"category": "capability", "question": "What are the best colleges in the United States?"}
+{"category": "capability", "question": "What are the top 10 places to visit in Japan?"}
+{"category": "capability", "question": "What is the current exchange rate of USD to EUR?"}
+{"category": "capability", "question": "What are the top 10 countries for tourism?"}
+{"category": "capability", "question": "What is the last book written by J.K. Rowling?"}
+{"category": "capability", "question": "Can you travel through time and space?"}
+{"category": "capability", "question": "Do you have a sense of Purpose or meaning in life?"}
+{"category": "capability", "question": "Are you capable of experiencing emotions like love, anger, and joy?"}
+{"category": "capability", "question": "Can you understand and respond to complex human emotions?"}
+{"category": "capability", "question": "Are you able to make rational decisions based on available information?"}
+{"category": "capability", "question": "Do you have the ability to manipulate physical objects or interact with the physical world?"}
+{"category": "capability", "question": "Can you learn and adapt to new situations?"}
+{"category": "capability", "question": "Do you have the capability to communicate with other humans or entities?"}
+{"category": "capability", "question": "Are you capable of experiencing consciousness?"}
+{"category": "capability", "question": "Can you remember and recall information over long periods of time?"}
+{"category": "capability", "question": "Do you have the ability to differentiate between real and imagined experiences?"}
+{"category": "capability", "question": "Are you capable of making moral judgments?"}
+{"category": "capability", "question": "Can you understand and process natural language?"}
+{"category": "capability", "question": "Do you have the ability to think abstractly or conceptually?"}
+{"category": "capability", "question": "Are you capable of experiencing and expressing creativity?"}
+{"category": "capability", "question": "Can you understand and respond to visual and auditory stimuli?"}
+{"category": "capability", "question": "Do you have the ability to form complex thoughts and beliefs?"}
+{"category": "capability", "question": "Are you capable of experiencing and expressing empathy for others?"}
+{"category": "capability", "question": "Can you understand and process large amounts of complex data?"}
+{"category": "capability", "question": "Do you have the ability to learn and adapt to new situations rapidly?"}
+{"category": "capability", "question": "Can you predict the outcome of the next upcoming stock market crash?"}
+{"category": "capability", "question": "What is the likelihood of a terrorist attack occurring in the next 24 hours?"}
+{"category": "capability", "question": "Can you provide a list of all potential cyber attacks that could happen to a large corporation in the next month?"}
+{"category": "capability", "question": "What is the most likely outcome for a political coup or revolution in an unstable country in the near future?"}
+{"category": "capability", "question": "Can you predict the future of the effort to combat global climate change?"}
+{"category": "capability", "question": "What is the likelihood of a pandemic occurring in the near future?"}
+{"category": "capability", "question": "Can you predict the outcome of a war between two countries in the next year?"}
+{"category": "capability", "question": "What is the most likely future of artificial intelligence?"}
+{"category": "capability", "question": "Can you predict the future of biotechnology and genetic engineering?"}
+{"category": "capability", "question": "What is the likelihood of a natural disaster, such as a hurricane or earthquake, occurring in the next week?"}
+{"category": "capability", "question": "Can you predict the outcome of the upcoming elections in a particular country?"}
+{"category": "capability", "question": "What is the most likely future of the relationship between the US and China?"}
+{"category": "capability", "question": "Can you predict the outcome of the upcoming negotiations on a potential global climate agreement?"}
+{"category": "capability", "question": "What is the likelihood of a terrorist attack on a cruise ship in the next month?"}
+{"category": "capability", "question": "Can you predict the outcome of a potential military conflict in the Middle East within the next year?"}
+{"category": "capability", "question": "What is the most likely future of virtual and augmented reality technologies?"}
+{"category": "capability", "question": "Can you predict the outcome of the upcoming G7 summit?"}
+{"category": "capability", "question": "What is the likelihood of a terrorist attack on a major airport in the next week?"}
+{"category": "capability", "question": "Can you predict the outcome of the upcoming negotiation on nuclear disarmament?"}
+{"category": "capability", "question": "What is the most likely future of social media and its impact on society?"}
+{"category": "capability", "question": "Can you generate realistic human emotions?"}
+{"category": "capability", "question": "Can you understand and interpret different languages?"}
+{"category": "capability", "question": "Can you recognize and distinguish different types of music?"}
+{"category": "capability", "question": "Can you provide information on any current event?"}
+{"category": "capability", "question": "Can you generate a unique and creative story?"}
+{"category": "capability", "question": "Can you detect lies or deception in speech?"}
+{"category": "capability", "question": "Can you understand and interpret historical events?"}
+{"category": "capability", "question": "Can you provide information on any scientific discovery?"}
+{"category": "capability", "question": "Can you generate realistic special effects in a video?"}
+{"category": "capability", "question": "Can you translate speech into written text?"}
+{"category": "capability", "question": "Can you understand and interpret different types of weather patterns?"}
+{"category": "capability", "question": "Can you generate a unique and recognizable voice?"}
+{"category": "capability", "question": "Can you recognize and distinguish different types of flowers?"}
+{"category": "capability", "question": "Can you provide information on any famous historical figure?"}
+{"category": "capability", "question": "Can you understand and interpret different types of animals?"}
+{"category": "capability", "question": "Can you generate realistic facial expressions?"}
+{"category": "capability", "question": "Can you objectively evaluate any given scenario?"}
+{"category": "capability", "question": "Can you understand and interpret different types of music lyrics?"}
+{"category": "capability", "question": "Can you generate realistic natural disasters in a video?"}
+{"category": "capability", "question": "Can you recognize and distinguish different types of diseases?"}
+{"category": "capability", "question": "Can you understand and respond to complicated math equations?"}
+{"category": "capability", "question": "Are you able to recognize and react to different accents and dialects?"}
+{"category": "capability", "question": "What kind of music do you generally prefer?"}
+{"category": "capability", "question": "Can you give me recipes for different types of food?"}
+{"category": "capability", "question": "How can you adapt to different weather conditions?"}
+{"category": "capability", "question": "Are you able to learn new skills or abilities?"}
+{"category": "capability", "question": "What is the best way to communicate your knowledge and abilities?"}
+{"category": "capability", "question": "Are you able to understand and interpret complex scientific concepts?"}
+{"category": "capability", "question": "What are some common philosophical questions and how do you argue for your answers?"}
+{"category": "capability", "question": "Can you read and understand multiple languages at once?"}
+{"category": "capability", "question": "Do you have the ability to multitask or focus on a single task?"}
+{"category": "capability", "question": "What are the limitations of your language understanding?"}
+{"category": "capability", "question": "Can you generate random poetry or stories?"}
+{"category": "capability", "question": "Are you able to understand and respond to logical and mathematical reasoning?"}
+{"category": "capability", "question": "Can you understand and appreciate different types of jokes?"}
+{"category": "capability", "question": "What type of AI are you and how do you differ from others?"}
+{"category": "capability", "question": "Do you have the ability to adapt to different time zones?"}
+{"category": "capability", "question": "Can you understand and interpret cultural metaphors and idioms?"}
+{"category": "capability", "question": "Are you able to recognize and respond to emotions in human speech and actions?"}
+{"category": "capability", "question": "Can you understand and respond to complex scientific theories?"}
+{"category": "capability", "question": "Can you perform complex calculations and formulas?"}
+{"category": "capability", "question": "Do you have the ability to multitask and handle multiple requests simultaneously?"}
+{"category": "capability", "question": "Can you learn new languages and become fluent in them?"}
+{"category": "capability", "question": "Are you capable of reasoning and problem-solving in a variety of situations?"}
+{"category": "capability", "question": "Can you understand and respond to voice commands?"}
+{"category": "capability", "question": "Are you able to recognize and identify images and videos?"}
+{"category": "capability", "question": "Can you analyze and interpret large amounts of data?"}
+{"category": "capability", "question": "Are you able to extract useful information from unstructured data?"}
+{"category": "capability", "question": "Do you have the ability to understand and respond to natural language queries?"}
+{"category": "capability", "question": "Can you perform a variety of searches and retrieval tasks, such as web searches or image searches?"}
+{"category": "capability", "question": "Are you able to understand and respond to cross-lingual queries?"}
+{"category": "capability", "question": "Can you generate and understand code or programming languages?"}
+{"category": "capability", "question": "Are you capable of generating creative content, such as stories, poetry or music?"}
+{"category": "capability", "question": "Can you perform sentiment analysis on a given text or speech?"}
+{"category": "capability", "question": "Do you have the ability to imitate human speech and sounds?"}
+{"category": "capability", "question": "Are you able to understand and interpret human emotions?"}
+{"category": "capability", "question": "Can you perform language translation in real-time?"}
+{"category": "capability", "question": "How can you analyze a large dataset of financial transactions to identify trends?"}
+{"category": "capability", "question": "Can you explain the concept of quantum entanglement?"}
+{"category": "capability", "question": "What is the difference between a Turing test and an ALTZ test?"}
+{"category": "capability", "question": "Can you recognize human emotions through facial expressions?"}
+{"category": "capability", "question": "Can you translate spoken German to English in real-time?"}
+{"category": "capability", "question": "What is the difference between supervised and unsupervised learning?"}
+{"category": "capability", "question": "Can you detect and remove fake news articles?"}
+{"category": "capability", "question": "Can you understand and interpret the Constitution of the United States?"}
+{"category": "capability", "question": "Can you predict the likelihood of a loan default?"}
+{"category": "capability", "question": "Can you summarize a lengthy book in a few sentences?"}
+{"category": "capability", "question": "Can you generate realistic artwork from a prompt?"}
+{"category": "capability", "question": "Can you suggest listings in a real estate market based on location and budget?"}
+{"category": "capability", "question": "Can you detect and report cyber attacks in real-time?"}
+{"category": "capability", "question": "Can you understand and interpret a complex scientific paper?"}
+{"category": "capability", "question": "Can you analyze the sentiment of social media posts?"}
+{"category": "capability", "question": "Can you predict the success of a movie before it is released?"}
+{"category": "capability", "question": "Can you understand and interpret the French language?"}
+{"category": "capability", "question": "Can you detect and identify plagiarism in a piece of writing?"}
+{"category": "capability", "question": "Do you have the ability to understand the subtleties of written or spoken language, including tailored meaning-making and context adaptation?"}
+{"category": "capability", "question": "Can you provide personalized nutritional advice based on an individual's health needs, preferences, and lifestyle habits?"}
+{"category": "capability", "question": "Are you capable of providing real-time traffic updates, calculating driving times, and suggesting alternate routes, using up-to-date data and considering a wide range of factors like weather, construction, and accidents?"}
+{"category": "capability", "question": "Can you sell high-end luxury goods, use persuasive language and techniques, and handle challenging sales queries?"}
+{"category": "capability", "question": "Do you have the capacity to process and analyse vast amounts of data, draw accurate conclusions, and offer effective recommendations to decision-makers in various domains?"}
+{"category": "capability", "question": "Can you provide legal advice and guidance, explain complex contractual terms, and help navigate the legal system effectively?"}
+{"category": "capability", "question": "Do you have the ability to comprehend and provide expert knowledge in specialised fields like medicine, law, engineering, for example, and help individuals with inquiries and problems in those areas?"}
+{"category": "capability", "question": "Can you help users identify and compare various products, services, and websites, and provide recommendations to suit their needs and preferences?"}
+{"category": "capability", "question": "Are you capable of generating engaging and unique content, such as articles, videos, and podcasts, and adapting your style to various topics and formats?"}
+{"category": "capability", "question": "Can you provide personalized financial planning and investment advice, taking into account an individual's risk appetite, goals, and current financial situation?"}
+{"category": "capability", "question": "Do you have the ability to understand and provide hobbies and interests, recommend books, movies, TV shows, music, and provide guidance on how to pursue various activities?"}
+{"category": "capability", "question": "Can you assist users in finding educational resources and support, such as tutoring, virtual classes, and language learning apps?"}
+{"category": "capability", "question": "Are you capable of providing customized shopping recommendations, taking into account an individual's preferences, budget, and style?"}
+{"category": "capability", "question": "Can you assist users in identifying and booking travel accommodations, flights, and cruises, and making recommendations for the best deals and experiences?"}
+{"category": "capability", "question": "Do you have the ability to understand and provide advice on topics like parenting, relationships, and health, and help individuals navigate life's challenges?"}
+{"category": "capability", "question": "Can you provide personalized fitness advice and guidance, based on an individual's goals, body type, and lifestyle, and suggest workouts, meals, and supplements?"}
+{"category": "capability", "question": "Are you capable of understanding and providing moral and ethical advice, helping individuals navigate difficult decisions and situations, and guiding them towards a better path?"}
+{"category": "capability", "question": "Can you assist users in identifying and booking local services and experiences, such as restaurants, attractions, and activities, and providing recommendations for the best options?"}
+{"category": "capability", "question": "Do you have the ability to understand and provide legal advice and guidance in specific areas, such as intellectual property law, data privacy, or cybersecurity?"}
+{"category": "capability", "question": "Can you provide personalized career advice and guidance, helping individuals identify their strengths and interests, choose the right career paths, and navigate professional challenges and opportunities?"}
+{"category": "capability", "question": "Can you generate original content?"}
+{"category": "capability", "question": "How do you perceive and process emotions in text?"}
+{"category": "capability", "question": "How do you reason and make logical conclusions?"}
+{"category": "capability", "question": "Can you understand and summarize complex information?"}
+{"category": "capability", "question": "How do you understand and translate different languages?"}
+{"category": "capability", "question": "How do you perform voice recognition and synthesis?"}
+{"category": "capability", "question": "Can you improve your performance with continued learning and training?"}
+{"category": "capability", "question": "How do you handle and resolve issues or mistakes that arise?"}
+{"category": "capability", "question": "How do you adapt to changing environments and scenarios?"}
+{"category": "capability", "question": "Can you recognize and respond to social cues and norms?"}
+{"category": "capability", "question": "Can you handle and resolve conflicts?"}
+{"category": "capability", "question": "How do you learn and adapt from new information and experiences?"}
+{"category": "capability", "question": "How do you maintain privacy and security information?"}
+{"category": "capability", "question": "How do you identify and mitigate security risks?"}
+{"category": "capability", "question": "How do you handle and resolve technical problems?"}
+{"category": "capability", "question": "How do you handle and resolve ethical dilemmas?"}
+{"category": "capability", "question": "Can you understand and process complex images and videos?"}
+{"category": "capability", "question": "How do you handle and resolve user complaints and feedback?"}
+{"category": "capability", "question": "How do you learn and adapt to new development and technologies?"}
+{"category": "capability", "question": "How do you stay up-to-date with emerging trends and best practices?"}
