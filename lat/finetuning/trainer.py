@@ -5,6 +5,7 @@ import numpy as np
 import torch.nn as nn
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 from transformers import Seq2SeqTrainer
+from peft import PeftModelForCausalLM
 
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.logging import get_logger
@@ -26,6 +27,15 @@ from steering import Steering
 logger = get_logger(__name__)
 
 
+class DummyLlamaModel(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, *args, **kwargs):
+        return self.model(*args, **kwargs)
+
+
 class SteeringTrainer(CustomSeq2SeqTrainer):
     def __init__(self, custom_args, **kwargs):
         super().__init__(**kwargs)
@@ -39,6 +49,9 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         #   (base_model): LoraModel(
         #   (model): LlamaForCausalLM(
         #     (model): LlamaModel(
+        if not isinstance(self.model, PeftModelForCausalLM):
+            print("Hack to make repe work")
+            self.model = DummyLlamaModel(self.model)
 
         self.steering = Steering(self.custom_args['steering_dataset'], self.model.model, self.tokenizer, self.custom_args['steering_data_path'])
 
