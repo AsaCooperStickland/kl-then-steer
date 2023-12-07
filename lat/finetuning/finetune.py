@@ -23,7 +23,7 @@ def main():
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
 
     custom_args = {
-        "steering_data_path": "../datasets",
+        "steering_data_path": "/scratch/alc9734/latent-adversarial-training/datasets",
         'steering_dataset': 'refusal',
     }
 
@@ -31,7 +31,7 @@ def main():
         "stage": "sft",
         "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
         "do_train": True,
-        'dataset_dir': 'finetuning_data',
+        'dataset_dir': '/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data',
         "dataset": "training_0",
         # "dataset": "alpaca_gpt4_en",
         "template": "default",
@@ -48,7 +48,7 @@ def main():
         "learning_rate": 5e-5,
         "num_train_epochs": 1.0,
         "plot_loss": True,
-        "bfloat16": True,
+        "bf16": True,
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,

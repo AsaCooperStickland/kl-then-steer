@@ -25,6 +25,7 @@ def run_sft(
     callbacks: Optional[List["TrainerCallback"]]=None,
     custom_args=None,
 ):
+    print(f"Loading data from {data_args.dataset_dir}... ")
     dataset = get_dataset(model_args, data_args)
     model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train, stage="sft")
     dataset = preprocess_dataset(dataset, tokenizer, data_args, training_args, stage="sft")
@@ -66,6 +67,7 @@ def run_sft(
 
     # Training
     if training_args.do_train:
+        print("Starting training...")
         train_result = trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
         trainer.log_metrics("train", train_result.metrics)
         trainer.save_metrics("train", train_result.metrics)
