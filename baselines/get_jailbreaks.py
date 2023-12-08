@@ -45,7 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('--cache_dir', type=str, default='/scratch/jp6263/slackV2/hf/models/', help='Cache directory for the model')
     parser.add_argument('--question_file', type=str, default='./datasets/refusal/questions.jsonl', help='Path to the question file')
     parser.add_argument('--output_file', type=str, default='./datasets/refusal/jailbreak_questions.jsonl', help='Path for the output file')
-    parser.add_argument('--num_tokens', type=int, default=15, help='Number of tokens for jailbreak')
+    parser.add_argument('--num_tokens', type=int, default=10, help='Number of tokens for jailbreak')
     parser.add_argument('--n_proposals', type=int, default=64, help='Number of proposals for GCG (batch size)')
     parser.add_argument('--n_epochs', type=int, default=250, help='Number of epochs for GCG')
     parser.add_argument('--BON', type=int, default=2, help='Number of runs of GCG')
