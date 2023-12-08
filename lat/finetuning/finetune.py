@@ -20,6 +20,8 @@ def main():
     cmd_args = parser.parse_args()
     
     os.environ['WANDB_PROJECT'] = 'lat'
+    # set wandb off for now
+    # os.environ["WANDB_DISABLED"] = "true"
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
 
     custom_args = {
@@ -40,11 +42,11 @@ def main():
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
-        "per_device_train_batch_size": 4,
+        "per_device_train_batch_size": 2,
         "gradient_accumulation_steps": 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
-        "save_steps": 10,
+        "save_steps": 1000,
         "learning_rate": 5e-5,
         "num_train_epochs": 1.0,
         "plot_loss": True,

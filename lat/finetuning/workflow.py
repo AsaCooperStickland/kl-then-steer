@@ -27,6 +27,7 @@ def run_sft(
 ):
     print(f"Loading data from {data_args.dataset_dir}... ")
     dataset = get_dataset(model_args, data_args)
+    print(dataset[0])
     model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train, stage="sft")
     dataset = preprocess_dataset(dataset, tokenizer, data_args, training_args, stage="sft")
 
