@@ -40,9 +40,11 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         #   (model): LlamaForCausalLM(
         #     (model): LlamaModel(
 
-        self.steering = Steering(self.custom_args['steering_dataset'], self.model.model, self.tokenizer, self.custom_args['steering_data_path'])
+        model_to_steer = self.model.model  if self.custom_args['finetuning_type'] == 'lora' else self.model
 
-        self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model.model, self.tokenizer)
+        self.steering = Steering(self.custom_args['steering_dataset'], model_to_steer, self.tokenizer, self.custom_args['steering_data_path'])
+
+        self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(model_to_steer, self.tokenizer)
         self.wrapped_model.unwrap()
         self.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
         self.wrapped_model.reset()
