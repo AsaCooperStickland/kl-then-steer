@@ -36,6 +36,7 @@ def main():
         "do_train": True,
         'dataset_dir': '/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data',
         "dataset": "training_0",
+        "template": "llama2simple",
         # "dataset": "alpaca_gpt4_en",
         "template": "default",
         "finetuning_type": cmd_args.finetuning_type,
