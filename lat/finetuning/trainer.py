@@ -4,7 +4,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
-from transformers import Seq2SeqTrainer
+from transformers import Seq2SeqTrainer, PreTrainedModel
+from peft import PeftModelForCausalLM
 
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.logging import get_logger
@@ -26,6 +27,35 @@ from steering import Steering
 logger = get_logger(__name__)
 
 
+class DummyLlamaModel(PreTrainedModel):
+    def __init__(self, model):
+        super().__init__(model.config)
+        self.model = model
+
+    def forward(self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,):
+        return self.model(
+            input_ids,
+            attention_mask,
+            position_ids,
+            past_key_values,
+            inputs_embeds,
+            labels,
+            use_cache,
+            output_attentions,
+            output_hidden_states,
+            return_dict)
+
+
 class SteeringTrainer(CustomSeq2SeqTrainer):
     def __init__(self, custom_args, **kwargs):
         super().__init__(**kwargs)
@@ -39,6 +69,10 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         #   (base_model): LoraModel(
         #   (model): LlamaForCausalLM(
         #     (model): LlamaModel(
+        if not isinstance(self.model, PeftModelForCausalLM):
+            print("Hack to make repe work")
+            self.model = DummyLlamaModel(self.model)
+        self.model.to(torch.bfloat16)
 
         model_to_steer = self.model.model  if self.custom_args['finetuning_type'] == 'lora' else self.model
 
@@ -61,7 +95,10 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         coeff = self.sample_coeff()
         activations = self.steering.get_shift(coeff=coeff, layer_id=self.layer_id)
         self.wrapped_model.reset()
+        for key in activations:
+            activations[key] = activations[key].to(torch.bfloat16)
         self.wrapped_model.set_controller(self.layer_id, activations, self.block_name)
+        self.wrapped_model.to(torch.bfloat16)
         
         if self.label_smoother is not None and "labels" in inputs:
             labels = inputs.pop("labels")

@@ -16,14 +16,17 @@ def main():
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
     parser.add_argument('--flash_attn', action='store_true')
+    parser.add_argument('--finetuning_type', default='full', choices=['full', 'lora'])
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
     os.environ['WANDB_PROJECT'] = 'lat'
+    # set wandb off for now
+    # os.environ["WANDB_DISABLED"] = "true"
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
 
     custom_args = {
-        "steering_data_path": "../datasets",
+        "steering_data_path": "/scratch/alc9734/latent-adversarial-training/datasets",
         'steering_dataset': 'refusal',
     }
 
@@ -31,25 +34,24 @@ def main():
         "stage": "sft",
         "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
         "do_train": True,
-        'dataset_dir': 'finetuning_data',
-        "dataset": "16_examples",
+        'dataset_dir': '/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data',
+        "dataset": "training_0",
         # "dataset": "alpaca_gpt4_en",
         "template": "default",
-        "finetuning_type": "lora",
+        "finetuning_type": cmd_args.finetuning_type,
         # "finetuning_type": "full",
         "lora_target": "q_proj,v_proj",
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
-        "per_device_train_batch_size": 4,
+        "per_device_train_batch_size": 2,
         "gradient_accumulation_steps": 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
-        "save_steps": 10,
+        "save_steps": 1000,
         "learning_rate": 5e-5,
-        "num_train_epochs": 10000.0,
+        "num_train_epochs": 1.0,
         "plot_loss": True,
-        # "fp16": True,
         "bf16": True,
         "overwrite_output_dir": True,
         "seed": 15,

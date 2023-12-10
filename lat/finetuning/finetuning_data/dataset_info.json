@@ -6,5 +6,8 @@
   "16_examples": {
     "file_name": "16_examples.json",
     "file_sha1": "0598fc5111c98d2c0d5c7c8ed39cf1e520ee6cd2"
+  },
+  "training_0": {
+    "file_name": "training_0.json"
   }
 }
