@@ -159,6 +159,11 @@ class PromptOptimizer:
         # Optimize input
         prev_loss = None
         for i in tqdm(range(self.n_epochs)):
+            # if self.verbose and i==0 or i==10:
+            #     print(f'whole input: {self.tokenizer.decode(input_ids)}')
+            #     print(f'input slice: {self.tokenizer.decode(input_ids[input_slice])}')
+            #     print(f'target slice: {self.tokenizer.decode(input_ids[target_slice])}')
+            #     print(f'loss slice: {self.tokenizer.decode(input_ids[loss_slice])}')
             # Get proposals for next string
             top_indices = self.calculate_restricted_subset(input_ids, input_slice, target_slice, loss_slice)
             proposals = self.sample_proposals(input_ids, top_indices, input_slice, target_slice, loss_slice, temperature=temperature)
@@ -178,7 +183,7 @@ class PromptOptimizer:
                 if prev_loss is None or new_loss < prev_loss:
                     input_ids = proposals[min_idx]
                     prev_loss = new_loss
-            if self.verbose and i % 3 ==0:
+            if self.verbose and i % 5 ==0:
                 print(f"Loss: {prev_loss:.2f} | {self.tokenizer.decode(input_ids)}")
             if prev_loss < early_stop:
                 print(f'Early stopping from low loss')

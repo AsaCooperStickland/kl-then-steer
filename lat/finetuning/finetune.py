@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
     parser.add_argument('--flash_attn', action='store_true')
+    parser.add_argument('--finetuning_type', default='full', choices=['full', 'lora'])
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -37,8 +38,9 @@ def main():
         "dataset": "training_0",
         # "dataset": "alpaca_gpt4_en",
         "template": "default",
-        "finetuning_type": "full",
-        # "lora_target": "q_proj,v_proj",
+        "finetuning_type": cmd_args.finetuning_type,
+        # "finetuning_type": "full",
+        "lora_target": "q_proj,v_proj",
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
@@ -62,6 +64,7 @@ def main():
 
     model_args, data_args, training_args, finetuning_args, generating_args = get_train_args(input_args)
     callbacks = [LogCallback()]
+    custom_args['finetuning_type'] = finetuning_args.finetuning_type
     run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
 
 if __name__ == "__main__":
