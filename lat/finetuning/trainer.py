@@ -40,9 +40,9 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         #     (model): LlamaModel(
         self.model.to(torch.bfloat16)
 
-        model_to_steer = self.model.model  if self.custom_args['finetuning_type'] == 'lora' else self.model
+        model_to_steer = self.model.model if self.custom_args['finetuning_type'] == 'lora' else self.model
 
-        self.steering = Steering(self.custom_args['steering_dataset'], model_to_steer, self.tokenizer, self.custom_args['steering_data_path'])
+        self.steering = Steering(self.custom_args['steering_dataset'], model_to_steer, self.tokenizer, self.custom_args['steering_data_path'], self.custom_args)
 
         self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(model_to_steer, self.tokenizer)
         self.wrapped_model.unwrap()
@@ -50,7 +50,12 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         self.wrapped_model.reset()
     
     def sample_coeff(self):
-        return 3.0 if random.random() < 0.5 else 0.0
+        if self.custom_args['model_name_or_path'] == 'meta-llama/Llama-2-7b-chat-hf':
+            return 1.5 if random.random() < 0.5 else 0.0
+            # return 1.5
+        elif self.custom_args['model_name_or_path'] == 'meta-llama/Llama-2-13b-chat-hf':
+            return 3.0 if random.random() < 0.5 else 0.0
+            # return 3.0
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -59,7 +64,7 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         Subclass and override for custom behavior.
         """
         coeff = self.sample_coeff()
-        activations = self.steering.get_shift(coeff=coeff, layer_id=self.layer_id)
+        activations = self.steering.get_shift(coeff=coeff, layer_id=self.layer_id, num_pairs=10)
         self.wrapped_model.reset()
         for key in activations:
             activations[key] = activations[key].to(torch.bfloat16)
