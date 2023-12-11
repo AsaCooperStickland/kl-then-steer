@@ -23,12 +23,14 @@ for example in dataset["train_sft"]:
     
 
 # Find all filepaths with "gpt" or "claude" in them ending in jsonl.
-base_file_path = 'datasets/refusal/'
+base_file_paths = ['datasets/refusal/', 'datasets/refusal/mistralai']
 file_paths = []
-for root, dirs, files in os.walk(base_file_path):
-    for file in files:
-        if file.endswith(".jsonl") and ("gpt" in file or "claude" in file):
-            file_paths.append(os.path.join(root, file))
+for base_file_path in base_file_paths:
+    for root, dirs, files in os.walk(base_file_path):
+        for file in files:
+            if file.endswith(".jsonl") and ("gpt" in file or "claude" in file or "mistral" in file):
+                file_paths.append(os.path.join(root, file))
+            
 
 refusal_counter = 0
 for file_path in file_paths:
