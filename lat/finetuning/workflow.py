@@ -3,13 +3,15 @@
 from typing import TYPE_CHECKING, Optional, List
 from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
 
-from llmtuner.data import get_dataset, preprocess_dataset, split_dataset
+from llmtuner.data import get_dataset, split_dataset
+from lat.data.preprocess import preprocess_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.misc import get_logits_processor
 from llmtuner.extras.ploting import plot_loss
 from llmtuner.model import load_model_and_tokenizer
 from llmtuner.train.sft.metric import ComputeMetrics
 from trainer import SteeringTrainer
+
 
 if TYPE_CHECKING:
     from transformers import TrainerCallback
@@ -25,7 +27,7 @@ def run_sft(
     callbacks: Optional[List["TrainerCallback"]]=None,
     custom_args=None,
 ):
-    print(f"Loading data from {data_args.dataset_dir}... ")
+    print(f"Loading data from {data_args.dataset_dir} with template {data_args.template}... ")
     dataset = get_dataset(model_args, data_args)
     print(dataset[0])
     model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train, stage="sft")
