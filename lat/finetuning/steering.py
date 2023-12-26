@@ -76,9 +76,20 @@ def preprocess_steering_data(data):
 
 
 class Steering:
-	def __init__(self, dataset, model, tokenizer, data_dir):
+	def __init__(self, dataset, model, tokenizer_arg, data_dir, custom_args):
 		self.model = model
+
+		# self.tokenizer = tokenizer
+		config_kwargs = {'trust_remote_code': True, 'cache_dir': None, 'revision': 'main', 'token': None}
+		tokenizer = AutoTokenizer.from_pretrained(custom_args['model_name_or_path'],
+			use_fast=True,
+			split_special_tokens = False,
+			padding_side="left",
+			**config_kwargs)
+		tokenizer.pad_token_id = 0 if tokenizer.pad_token_id is None else tokenizer.pad_token_id
+		tokenizer.bos_token_id = 1
 		self.tokenizer = tokenizer
+
 		self.rep_token = -1
 		self.hidden_layers = list(range(-1, -model.config.num_hidden_layers, -1))
 		self.n_difference = 1
@@ -121,10 +132,11 @@ class Steering:
 	def subsample(self, category, num_pairs):
 		if category is None:
 			category = random.choice(list(self.train_data.keys()))
-		# category = 'happiness'
 		orig_data = self.train_data[category]
 		subsample = self.sample_pairs(orig_data, num_pairs)
-		# subsample = orig_data
+
+		# category = 'happiness'
+		# subsample = self.train_data[category]
 		return subsample
 	
 	def get_shift(self, coeff, layer_id, category=None, num_pairs=10):
