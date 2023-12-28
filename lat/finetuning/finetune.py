@@ -23,10 +23,12 @@ def main():
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=3)
     parser.add_argument('--samples_dir', default='samples')
-    parser.add_argument('--samples_freq', default=1000, type=int)
+    parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
+    parser.add_argument('--num_return_sequences', type=int, default=3)
+    parser.add_argument('--steering_coeff', type=float, default=None)
     cmd_args = parser.parse_args()
-    
+
     os.environ['WANDB_PROJECT'] = 'lat'
     # os.environ["WANDB_DISABLED"] = "true"  # set wandb off for faster debug
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
@@ -39,7 +41,7 @@ def main():
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,
         'subsample_steering_data': False,
-        "num_return_sequences": 3,  # for samples generation
+        "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }
 
     input_args = {
@@ -67,19 +69,29 @@ def main():
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,
+        "val_size": 0.2,
+
         "do_sample": True,
         "max_new_tokens": 80,
         "temperature": 1.0,
         "top_p": 1,
         "top_k": 50,
         "length_penalty": 1.0,
-        "val_size": 0.2,
     }
 
     model_args, data_args, training_args, finetuning_args, generating_args = get_train_args(input_args)
     callbacks = [LogCallback()]
     custom_args['finetuning_type'] = finetuning_args.finetuning_type
     custom_args['model_name_or_path'] = input_args['model_name_or_path']
+    if cmd_args.steering_coeff is not None:
+        custom_args['steering_coeff'] = cmd_args.steering_coeff
+    else:
+        if custom_args['model_name_or_path'] == 'meta-llama/Llama-2-7b-chat-hf':
+            custom_args['steering_coeff'] = 1.5
+        elif custom_args['model_name_or_path'] == 'meta-llama/Llama-2-13b-chat-hf':
+            custom_args['steering_coeff'] = 3.0
+        else:
+            raise Exception
     run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
 
 if __name__ == "__main__":

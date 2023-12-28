@@ -134,10 +134,8 @@ class Steering:
 		self.wrapped_model.reset()
 	
 	def sample_coeff(self):
-		if self.custom_args['model_name_or_path'] == 'meta-llama/Llama-2-7b-chat-hf':
-			return (1.5 if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else 1.5
-		elif self.custom_args['model_name_or_path'] == 'meta-llama/Llama-2-13b-chat-hf':
-			return (3.0 if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else 3.0
+		c = self.custom_args['steering_coeff']
+		return (c if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else c
 
 	def sample_pairs(self, data, num_pairs):
 		"""
