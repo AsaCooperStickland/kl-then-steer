@@ -14,7 +14,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 class SamplesCallback(TrainerCallback):
-	def __init__(self, dataset, data_args, training_args, generating_args, custom_args, steering):
+	def __init__(self, train_dataset, eval_dataset, data_args, training_args, generating_args, custom_args, steering):
 		config_kwargs = {'trust_remote_code': True, 'cache_dir': None, 'revision': 'main', 'token': None}
 		tokenizer = AutoTokenizer.from_pretrained(custom_args['model_name_or_path'],
 					use_fast=True,
@@ -26,8 +26,11 @@ class SamplesCallback(TrainerCallback):
 		self.tokenizer = tokenizer
 		self.steering = steering
 		self.custom_args = custom_args
+		self.num_return_sequences = custom_args['num_return_sequences']
+		self.prev_sampling_step_indices = set()
 
-		dataset = preprocess_dataset(dataset, tokenizer, data_args, training_args, stage="sft")
+		train_dataset = preprocess_dataset(train_dataset, tokenizer, data_args, training_args, stage="sft")
+		eval_dataset = preprocess_dataset(eval_dataset, tokenizer, data_args, training_args, stage="sft")
 
 		data_collator = DataCollatorForSeq2Seq(
 			tokenizer=tokenizer,
@@ -43,7 +46,8 @@ class SamplesCallback(TrainerCallback):
 			"num_workers": training_args.dataloader_num_workers,
 			"pin_memory": training_args.dataloader_pin_memory,
 		}
-		self.loader = DataLoader(dataset, **dataloader_params)
+		self.train_loader = DataLoader(train_dataset, shuffle=False, **dataloader_params)
+		self.eval_loader = DataLoader(eval_dataset, shuffle=False, **dataloader_params)
 
 		# Keyword arguments for `model.generate`
 		gen_kwargs = generating_args.to_dict()
@@ -53,22 +57,34 @@ class SamplesCallback(TrainerCallback):
 		self.gen_kwargs = gen_kwargs
 
 	def on_step_begin(self, args, state, control, model, **kwargs):
-		print(f"Generating samples at step {state.global_step}")
+		if self.custom_args['samples_freq'] != -1 and (state.global_step % self.custom_args['samples_freq'] == 0) and (state.global_step not in self.prev_sampling_step_indices):
+			self.prev_sampling_step_indices.add(state.global_step)  # callback may be erroneously called more than once per step, ignore calls beyond the first one
+			print(f"Generating samples at step {state.global_step}")
 
-		if self.custom_args['samples_freq'] != -1 and (state.global_step % self.custom_args['samples_freq'] == 0):
-			self.sample_and_save(state, model, 'none')
+			self.sample_and_save(state, model, prompt_mode='train', steering_mode='none')
 
 			self.steering.do_shift(mode='train')
-			self.sample_and_save(state, model, 'train')
+			self.sample_and_save(state, model, prompt_mode='train', steering_mode='train')
 			self.steering.reset()
 
 			self.steering.do_shift(mode='test')
-			self.sample_and_save(state, model, 'test')
+			self.sample_and_save(state, model, prompt_mode='train', steering_mode='test')
 			self.steering.reset()
 
-	def sample_and_save(self, state, model, steering_mode):
+			self.sample_and_save(state, model, prompt_mode='test', steering_mode='none')
+
+			self.steering.do_shift(mode='train')
+			self.sample_and_save(state, model, prompt_mode='test', steering_mode='train')
+			self.steering.reset()
+
+			self.steering.do_shift(mode='test')
+			self.sample_and_save(state, model, prompt_mode='test', steering_mode='test')
+			self.steering.reset()
+
+	def sample_and_save(self, state, model, prompt_mode, steering_mode):
 		records = []
-		for inputs in self.loader:
+		loader = self.train_loader if prompt_mode == 'train' else self.eval_loader
+		for inputs in loader:
 			# for left-padded tensors for generation
 			gen_input_ids = []
 			for i in range(inputs['input_ids'].size(0)):
@@ -90,22 +106,25 @@ class SamplesCallback(TrainerCallback):
 				decoded_input_text = self.tokenizer.decode(input_id_tensor, skip_special_tokens=True)
 				decoded_input_texts.append(decoded_input_text)
 
-			num_return_sequences = 4
-			self.gen_kwargs['num_return_sequences'] = num_return_sequences
+			self.gen_kwargs['num_return_sequences'] = self.num_return_sequences
 			gen = model.generate(input_ids=gen_input_ids.cuda(), **self.gen_kwargs)
 			generated_texts = []
 			for decoded_input_text_i, decoded_input_text in enumerate(decoded_input_texts):
-				for sample_i in range(num_return_sequences):
-					gen_i = decoded_input_text_i * num_return_sequences + sample_i
+				for sample_i in range(self.num_return_sequences):
+					gen_i = decoded_input_text_i * self.num_return_sequences + sample_i
 					gen_decoded = self.tokenizer.decode(gen[gen_i], skip_special_tokens=True)
 					# generated_texts.append(decoded_text)
 					gen_only = gen_decoded[len(decoded_input_text):]
-					records.append({'step': state.global_step, 'steering_mode': steering_mode, 'input': decoded_input_text, 'sample_i': sample_i, 'generation': gen_only})
+					records.append({
+						'step': state.global_step,
+						'prompt_mode': prompt_mode,
+       					'steering_mode': steering_mode,
+						'input': decoded_input_text,
+						'sample_i': sample_i,
+						'generation': gen_only
+					})
 
-			# generated_texts = [generated_texts[i][len(decoded_input_texts[i]):] for i in range(len(decoded_input_texts))]
-
-			# for input_text, generated_text in zip(decoded_input_texts, generated_texts):
-			# 	records.append({'step': state.global_step, 'input': input_text, 'generation': generated_text, 'steering_mode': steering_mode})
+			break  # just do the first batch for now
 		df = pd.DataFrame(records)
 		# time = datetime.now().strftime("%Y-%m-%d_%H:%M")
 		# csv_path = os.path.join(self.output_dir, f'samples_step_{state.global_step}_time_{time}.csv')

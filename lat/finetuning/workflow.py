@@ -36,10 +36,13 @@ def run_sft(
 	callbacks: Optional[List["TrainerCallback"]]=None,
 	custom_args=None,
 ):
+	model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train, stage="sft")
 	print(f"Loading data from {data_args.dataset_dir}... ")
 	orig_dataset = get_dataset(model_args, data_args)
-	model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train, stage="sft")
-	train_dataset = preprocess_dataset(orig_dataset, tokenizer, data_args, training_args, stage="sft")
+	data_split = split_dataset(orig_dataset, data_args, training_args)
+	train_dataset = data_split["train_dataset"]
+	eval_dataset = data_split["eval_dataset"] if "eval_dataset" in data_split else None
+	processed_train_dataset = preprocess_dataset(train_dataset, tokenizer, data_args, training_args, stage="sft")
 
 	# assert not training_args.predict_with_generate
 	if training_args.predict_with_generate:
@@ -61,7 +64,7 @@ def run_sft(
 
 	model = model.to(torch.bfloat16)
 	steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
-	samples_callback = SamplesCallback(orig_dataset, data_args, training_args, generating_args, custom_args, steering)
+	samples_callback = SamplesCallback(train_dataset, eval_dataset, data_args, training_args, generating_args, custom_args, steering)
 	callbacks.append(samples_callback)
 	trainer = SteeringTrainer(
 		custom_args=custom_args,
@@ -72,7 +75,7 @@ def run_sft(
 		data_collator=data_collator,
 		callbacks=callbacks,
 		compute_metrics=ComputeMetrics(tokenizer) if training_args.predict_with_generate else None,
-		**split_dataset(train_dataset, data_args, training_args)
+		train_dataset=processed_train_dataset,
 	)
 
 	print("Starting training...")

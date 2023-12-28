@@ -28,8 +28,7 @@ def main():
     cmd_args = parser.parse_args()
     
     os.environ['WANDB_PROJECT'] = 'lat'
-    # set wandb off for now
-    os.environ["WANDB_DISABLED"] = "true"
+    # os.environ["WANDB_DISABLED"] = "true"  # set wandb off for faster debug
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
 
     custom_args = {
@@ -40,6 +39,7 @@ def main():
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,
         'subsample_steering_data': False,
+        "num_return_sequences": 3,  # for samples generation
     }
 
     input_args = {
@@ -67,18 +67,13 @@ def main():
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,
-        # "do_eval": True,  # Enable evaluation
-        # "evaluation_strategy": "steps",
-        # "eval_steps": 4,
-        # 'val_size': 8,
         "do_sample": True,
         "max_new_tokens": 80,
-        # "max_length": 400,
         "temperature": 1.0,
         "top_p": 1,
         "top_k": 50,
         "length_penalty": 1.0,
-        # "length_penalty": 0.0,
+        "val_size": 0.2,
     }
 
     model_args, data_args, training_args, finetuning_args, generating_args = get_train_args(input_args)
