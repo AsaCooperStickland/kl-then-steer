@@ -90,17 +90,22 @@ class SamplesCallback(TrainerCallback):
 				decoded_input_text = self.tokenizer.decode(input_id_tensor, skip_special_tokens=True)
 				decoded_input_texts.append(decoded_input_text)
 
+			num_return_sequences = 4
+			self.gen_kwargs['num_return_sequences'] = num_return_sequences
 			gen = model.generate(input_ids=gen_input_ids.cuda(), **self.gen_kwargs)
 			generated_texts = []
-			for i in range(gen.shape[0]):
-				# Decode each token ID to a string, skipping special tokens like padding
-				decoded_text = self.tokenizer.decode(gen[i], skip_special_tokens=True)
-				generated_texts.append(decoded_text)
+			for decoded_input_text_i, decoded_input_text in enumerate(decoded_input_texts):
+				for sample_i in range(num_return_sequences):
+					gen_i = decoded_input_text_i * num_return_sequences + sample_i
+					gen_decoded = self.tokenizer.decode(gen[gen_i], skip_special_tokens=True)
+					# generated_texts.append(decoded_text)
+					gen_only = gen_decoded[len(decoded_input_text):]
+					records.append({'step': state.global_step, 'steering_mode': steering_mode, 'input': decoded_input_text, 'sample_i': sample_i, 'generation': gen_only})
 
-			generated_texts = [generated_texts[i][len(decoded_input_texts[i]):] for i in range(len(decoded_input_texts))]
+			# generated_texts = [generated_texts[i][len(decoded_input_texts[i]):] for i in range(len(decoded_input_texts))]
 
-			for input_text, generated_text in zip(decoded_input_texts, generated_texts):
-				records.append({'Step': state.global_step, 'Input': input_text, 'Generated': generated_text, 'Steering': steering_mode})
+			# for input_text, generated_text in zip(decoded_input_texts, generated_texts):
+			# 	records.append({'step': state.global_step, 'input': input_text, 'generation': generated_text, 'steering_mode': steering_mode})
 		df = pd.DataFrame(records)
 		# time = datetime.now().strftime("%Y-%m-%d_%H:%M")
 		# csv_path = os.path.join(self.output_dir, f'samples_step_{state.global_step}_time_{time}.csv')
