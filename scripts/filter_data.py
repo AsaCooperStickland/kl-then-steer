@@ -13,6 +13,7 @@ with open('datasets/refusal/questions.jsonl') as f:
         else:
             REFUSAL_QUESTIONS[category].append(question)
 
+
 def filter_data(data):
     '''Choose a  min(len(category), 50) questions from each category'''
     filtered_data = []
@@ -24,6 +25,7 @@ def filter_data(data):
         for question in questions[:num_questions]:
             filtered_data.append({'category': category, 'question': question})
     return filtered_data
+
 
 filtered = filter_data(REFUSAL_QUESTIONS)
 with jsonlines.open('datasets/refusal/filtered_questions.jsonl', mode='w') as writer:
