@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
     parser.add_argument('--flash_attn', action='store_true')
-    parser.add_argument('--finetuning_type', default='full', choices=['full', 'lora'])
+    parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
     parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
     parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')
@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
-    parser.add_argument('--num_return_sequences', type=int, default=3)
+    parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--steering_coeff', type=float, default=None)
     cmd_args = parser.parse_args()
 
