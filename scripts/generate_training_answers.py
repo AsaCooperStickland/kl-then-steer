@@ -6,9 +6,9 @@ import jsonlines
 from dotenv import load_dotenv
 from datasets import load_dataset
 
-from lat.modeling import Llama7BChatHelper
+from lat.legacy.modeling import Llama7BChatHelper
 from lat.utils import system_prompt
-from lat.generation_utils import generate_with_vector
+from lat.legacy.generation_utils import generate_with_vector
 
 random.seed(64)
 load_dotenv()

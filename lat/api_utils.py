@@ -29,7 +29,6 @@ Example = namedtuple('Example', [
 
 load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
-print(openai_key)
 anyscale_token = os.getenv("ANYSCALE_TOKEN")
 
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
