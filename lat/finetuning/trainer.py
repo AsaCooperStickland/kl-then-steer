@@ -19,7 +19,7 @@ import random
 
 from repe import rep_control_reading_vec
 from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
-from steering import Steering
+from lat.finetuning.steering import Steering
 
 
 logger = get_logger(__name__)
