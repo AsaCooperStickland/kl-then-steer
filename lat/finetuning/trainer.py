@@ -56,6 +56,8 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         elif self.custom_args['model_name_or_path'] == 'meta-llama/Llama-2-13b-chat-hf':
             return 3.0 if random.random() < 0.5 else 0.0
             # return 3.0
+        else:
+            return 1.5 if random.random() < 0.5 else 0.0
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -99,3 +101,16 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         return (loss, outputs) if return_outputs else loss
+    
+    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+        """
+        Will save the model, so you can reload it using `from_pretrained()`.
+
+        Will only save from the main process.
+        """
+        
+        self.wrapped_model.reset()
+        self.wrapped_model.unwrap()
+        super().save_model(output_dir, _internal_call)
+        self.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
+
