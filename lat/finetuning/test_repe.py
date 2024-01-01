@@ -62,8 +62,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     # Loop through each multiplier
     for multiplier in [-3.0, -1.5, 0.0, 1.5, 3.0]:
         answers = []
-        activations = trainer.steering.get_shift(coeff=multiplier, layer_id=layer_ids, num_pairs=200)
         trainer.wrapped_model.reset()
+        activations = trainer.steering.get_shift(coeff=multiplier, layer_id=layer_ids, num_pairs=200)
         for key in activations:
             activations[key] = activations[key].to(torch.bfloat16)
         trainer.wrapped_model.set_controller(layer_ids, activations, block_name)
