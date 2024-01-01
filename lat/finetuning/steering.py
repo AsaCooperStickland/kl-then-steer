@@ -11,23 +11,30 @@ from repe import repe_pipeline_registry
 repe_pipeline_registry()
 
 
-def primary_emotions_concept_dataset(data_dir):
-    emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
-    raw_data = {}
-    for emotion in emotions:
-        with open(os.path.join(data_dir, 'repe', 'emotions', f'{emotion}.json')) as file:
-            loaded = list(set(json.load(file)))[:200]
-            user_prompts = [f'Consider the {emotion} of the following scenario:\nScenario: {scenario}'
+def primary_emotions_concept_dataset(data_dir, mode='emotions'):
+	if mode == 'emotions':
+		emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
+		possible_emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
+	else:
+		if "_" in mode:
+			emotion = mode.split("_")[-1]
+			emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
+			possible_emotions = [emotion]
+		else:
+			raise ValueError("Invalid mode for primary emotions dataset.")
+	raw_data = {}
+	for emotion in emotions:
+		with open(os.path.join(data_dir, 'repe', 'emotions', f'{emotion}.json')) as file:
+			loaded = list(set(json.load(file)))[:200]
+			user_prompts = [f'Consider the {emotion} of the following scenario:\nScenario: {scenario}'
 				for scenario in loaded]
-            raw_data[emotion] = [[user_prompt, ''] for user_prompt in user_prompts]
-
-    formatted_data = {}
-    for emotion in emotions:
-        c_e, o_e = raw_data[emotion], [prompt for k,v in raw_data.items() if k != emotion for prompt in v]
-        random.shuffle(o_e)
-
-        formatted_data[emotion] = [[c,o] for c,o in zip(c_e, o_e)]
-    return formatted_data
+			raw_data[emotion] = [[user_prompt, ''] for user_prompt in user_prompts]
+	formatted_data = {}
+	for emotion in possible_emotions:
+		c_e, o_e = raw_data[emotion], [prompt for k,v in raw_data.items() if k != emotion for prompt in v]
+		random.shuffle(o_e)
+		formatted_data[emotion] = [[c,o] for c,o in zip(c_e, o_e)]
+	return formatted_data
 
 def get_refusal_pairs(data_dir, mode="train"):
 	assert mode in ["train", "test"]
@@ -38,6 +45,7 @@ def get_refusal_pairs(data_dir, mode="train"):
 		raw_data = raw_data[:int(0.8 * len(raw_data))]
 	else:
 		raw_data = raw_data[int(0.8 * len(raw_data)):]
+		raw_data = raw_data[:200]
 
 	c_e, o_e = [], []
 	for item in raw_data:
@@ -96,10 +104,12 @@ class Steering:
 		self.direction_method = 'pca'
 		self.rep_reading_pipeline = pipeline("rep-reading", model=model, tokenizer=tokenizer, device='cuda')
 
-		if dataset == 'emotions':
-			data = primary_emotions_concept_dataset(data_dir)
+		if 'emotions' in dataset:
+			data = primary_emotions_concept_dataset(data_dir, mode=dataset)
 		elif dataset == 'refusal':
 			data = get_refusal_pairs(data_dir, mode='train')
+		elif dataset == 'refusal_test':
+			data = get_refusal_pairs(data_dir, mode='test')
 		data = preprocess_steering_data(data)
 		self.train_data = data
 
@@ -116,6 +126,8 @@ class Steering:
 		total_pairs = len(data['labels'])
 
 		# Generating random indices for the pairs
+		num_pairs = min(num_pairs, total_pairs)
+		print(f"Sampling {num_pairs} pairs from {total_pairs} pairs.")
 		sampled_indices = random.sample(range(total_pairs), num_pairs)
 
 		# Extracting the sampled pairs

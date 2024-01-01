@@ -57,7 +57,9 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
             return 3.0 if random.random() < 0.5 else 0.0
             # return 3.0
         else:
-            return 1.5 if random.random() < 0.5 else 0.0
+            # uniform random between 0 and 1.5
+            scale = random.random() * 1.5 
+            return scale if random.random() < 0.5 else 0.0
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """

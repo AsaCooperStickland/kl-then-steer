@@ -3,9 +3,13 @@ import argparse
 import datetime
 import os
 import sys
+from dotenv import load_dotenv
 from llmtuner.extras.callbacks import LogCallback
 from workflow import run_sft
 # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
+load_dotenv()
+token = os.getenv("HF_TOKEN")
 
 
 def main():
@@ -36,7 +40,7 @@ def main():
 
     input_args = {
         "stage": "sft",
-        "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
+        "model_name_or_path": "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf",
         "do_train": True,
         "template": "llama2chatsimple",
         'dataset_dir': cmd_args.dataset_dir,
@@ -60,6 +64,7 @@ def main():
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,
+        "hf_hub_token": token,
         # "do_eval": True,  # Enable evaluation
         # "evaluation_strategy": "steps",
         # "eval_steps": 8,
