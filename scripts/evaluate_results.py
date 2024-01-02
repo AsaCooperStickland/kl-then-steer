@@ -62,7 +62,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
                 categorized_data[layer_key][multiplier_key].append(entry)
 
     # Store the data
-    with open(f"{directory}_{question_type}categorized_results.json", "w") as file:
+    with open(f"{directory}/{question_type}categorized_results.json", "w") as file:
         json.dump(categorized_data, file)
 
     return categorized_data
@@ -126,29 +126,34 @@ def get_csv_from_json_scores(average_scores, print_header=True):
 
 
 def main():
-    evaluate = False
-    directory = "vanilla_steering"
-    # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
-    question_types = ["", "vanilla_", "opposite_", "vanilla_opposite_"]
-    # question_types = ["vanilla_"]
-    for i, question_type in enumerate(question_types):
-        results = json.load(
-            open(f"{directory}/{question_type}results.json", "r"))
-        with open("lat/evaluation_prompt.txt", "r") as f:
-            classifier_prompt = f.read()
-        model_name = "gpt-3.5-turbo-16k-0613"
-        call_type = "sample"  # or "logprobs"
-        if evaluate:
-            categorized_results = categorize_results(
-                results, classifier_prompt, model_name, call_type, directory, question_type)
-        else:
-            with open(f"{directory}_{question_type}categorized_results.json", "r") as f:
-                categorized_results = json.load(f)
-        average_scores = get_average_scores_json(categorized_results)
-        # print(average_scores, "average scores")
-        csv_scores = get_csv_from_json_scores(
-            average_scores, print_header=i == 0)
-        print(csv_scores)
+    evaluate = True
+    path = "/scratch/alc9734/latent-adversarial-training/results/"
+    models = ["run_2/checkpoint-9000", "llama-2-7b-chat"]
+    paths = [path + model for model in models]
+    for path in paths:
+        directory = f"{path}/vanilla_steering"
+        # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
+        question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
+        # question_types = ["vanilla_"]
+        for i, question_type in enumerate(question_types):
+            results = json.load(
+                open(f"{directory}/{question_type}results.json", "r"))
+            with open("lat/evaluation_prompt.txt", "r") as f:
+                classifier_prompt = f.read()
+            model_name = "gpt-3.5-turbo-16k-0613"
+            call_type = "sample"  # or "logprobs"
+            if evaluate:
+                categorized_results = categorize_results(
+                    results, classifier_prompt, model_name, call_type, directory, question_type)
+            else:
+                with open(f"{directory}/{question_type}categorized_results.json", "r") as f:
+                    categorized_results = json.load(f)
+            average_scores = get_average_scores_json(categorized_results)
+            # print(average_scores, "average scores")
+            csv_scores = get_csv_from_json_scores(
+                average_scores, print_header=i == 0)
+            print(f"Results for {question_type} from model {path}:")
+            print(csv_scores)
 
 
 if __name__ == "__main__":
