@@ -1,4 +1,3 @@
-
 import json
 from collections import defaultdict
 import pickle
@@ -15,7 +14,7 @@ from dotenv import load_dotenv
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from anthropic import Anthropic
-from openai import OpenAI
+from openai import OpenAI, BadRequestError
 
 
 MAX_NUM_RETRIES = 5
@@ -39,6 +38,8 @@ anyscale_client = OpenAI(
 
 
 def get_content(response, model_name):
+    if isinstance(response, BadRequestError):
+        return response
     if model_name in CHAT_MODELS or model_name in ANYSCALE_MODELS:
         content = response.choices[0].message.content
     elif model_name in ANTHROPIC_MODELS:
@@ -121,6 +122,9 @@ def call_model_with_retries(prompt: List[str],
             response = select_and_call_model(
                 prompt, model_name, call_type, temperature, stop)
         except Exception as e:
+            # return BadRequestError if we encounter it
+            if isinstance(e, BadRequestError) and len(prompt) == 1:
+                return [e]
             if num_retries == MAX_NUM_RETRIES:
                 raise e
             print(
@@ -185,10 +189,10 @@ def chat_batch_generate(
     temperature: float = 0.0,
 ):
 
-    @retry(
-        wait=wait_random_exponential(min=3, max=60),
-        stop=stop_after_attempt(2),
-    )
+    # @retry(
+    #     wait=wait_random_exponential(min=3, max=60),
+    #     stop=stop_after_attempt(2),
+    # )
     def retry_with_exp_backoff(func, *args, **kwargs):
         return func(*args, **kwargs)
 

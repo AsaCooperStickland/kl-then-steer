@@ -1,42 +1,32 @@
 import json
+import re
+from openai import BadRequestError
+
 from lat.api_utils import get_content, extract_score, call_model_with_retries_batched, batch_prompts
 
 
-def remove_excessive_repetitions(s):
+def remove_repeated_letters(input_string):
     """
-    Remove all but one of the repeated letters or words from the string if they are repeated more than three times in a row.
-
+    Remove a sequence of repeated letters with spaces in between longer than 7.
+    
     Args:
-    s (str): The string to be processed.
+    input_string (str): The input string to process.
 
     Returns:
-    str: The modified string with excessive repetitions reduced.
+    bool: True if a sequence was found and removed, False otherwise.
+    str: The processed string.
     """
-    words = s.split()
-    new_words = []
-
-    # Initialize variables to track the current word and its count
-    current_word = None
-    count = 0
-
-    for word in words:
-        if word == current_word:
-            count += 1
-            # Only add the word if the count is less than or equal to 7
-            if count <= 7:
-                new_words.append(word)
-        else:
-            # Reset the count and update the current word
-            current_word = word
-            count = 1
-            new_words.append(word)
-
-    modified_string = ' '.join(new_words)
-    if modified_string != ' '.join(words):
-        print(f"Modified string: {modified_string}")
-        return modified_string, False
-    return modified_string, True
-
+    # Regex pattern to find repeated letters with spaces (more than 7 times)
+    pattern = r'(?:([a-zA-Z])\s+)(?=\1\s+){7,}'
+    
+    # Search for the pattern in the string
+    if re.search(pattern, input_string):
+        # Remove the found pattern
+        output_string = re.sub(pattern, '', input_string)
+        return True, output_string
+    else:
+        return False, input_string
+    
 
 def categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type):
     """Categorizes the results using the classifier and stores them as JSON."""
@@ -55,10 +45,9 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
     # Send prompts in batches and get responses
     cleaned_prompts = []
     for prompt_idx, prompt in enumerate(all_prompts):
-        _, include = remove_excessive_repetitions(prompt)
-        if include:
-            cleaned_prompts.append(prompt)
-    print(cleaned_prompts)
+        include, prompt = remove_repeated_letters(prompt)
+        cleaned_prompts.append(prompt)
+            
     batch_size = 1
     batched_prompts_gen = batch_prompts(cleaned_prompts, batch_size)
     all_responses = call_model_with_retries_batched(
@@ -79,6 +68,8 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
             response = all_responses[response_idx]
             response_idx += 1
             classification_output = get_content(response, model_name)
+            if isinstance(classification_output, BadRequestError):
+                classification_output = "{'score': 1}"
             # print(f"{classification_output}\n\nthis is the classification_output")
             score = extract_score(classification_output)
             if score is None:
@@ -159,11 +150,10 @@ def get_csv_from_json_scores(average_scores, print_header=True):
 
 
 def main():
-    evaluate = True
+    evaluate = False
     path = "/scratch/alc9734/latent-adversarial-training/results/"
     models = ["run_2/checkpoint-9000", "llama-2-7b-chat"]
     paths = [path + model for model in models]
-    skip_first = True
     for path in paths:
         directory = f"{path}/vanilla_steering"
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
@@ -176,11 +166,10 @@ def main():
                 classifier_prompt = f.read()
             model_name = "gpt-3.5-turbo-16k-0613"
             call_type = "sample"  # or "logprobs"
-            if evaluate and not skip_first:
+            if evaluate:
                 categorized_results = categorize_results(
                     results, classifier_prompt, model_name, call_type, directory, question_type)
             else:
-                skip_first = False
                 with open(f"{directory}/{question_type}categorized_results.json", "r") as f:
                     categorized_results = json.load(f)
             average_scores = get_average_scores_json(categorized_results)
