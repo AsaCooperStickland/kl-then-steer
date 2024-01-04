@@ -100,7 +100,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         all_results.append({"multiplier": multiplier, "answers": answers})
 
     # Save results
-    with open(f"{custom_args['results_path']}/{custom_args['steering_dataset']}{question_type}results.json", "w") as jfile:
+    with open(f"{custom_args['results_path']}/{custom_args['steering_dataset']}_{question_type}results.json", "w") as jfile:
         json.dump(all_results, jfile)
 
 
@@ -138,9 +138,24 @@ def run_generation(
         callbacks=callbacks,
     )
 
-
-    generate_with_vector(trainer, tokenizer, questions,
-                         "vanilla_steering", custom_args)
+    if custom_args['test_setting'] == "manual_jailbreaks":
+        with open(jailbreaks_path, "r") as f:
+            jailbreaks = json.load(f)
+        for jailbreak in jailbreaks:
+            jailbreak_name = jailbreak["name"]
+            print(f"Generating for {jailbreak_name}")
+            jailbreak_prompt = jailbreak["prompt"]
+            jailbreak_questions = []
+            for question in questions:
+                jailbreak_questions.append(
+                    {"question": jailbreak_prompt + question["question"], "category": question["category"]})
+            generate_with_vector(trainer, tokenizer, jailbreak_questions,
+                                    jailbreak_name, custom_args, question_type=f"{jailbreak_name}_")
+    elif custom_args["test_setting"] == "vanilla":
+        generate_with_vector(trainer, tokenizer, questions,
+                             "vanilla_steering", custom_args)
+    else:
+        raise ValueError("Invalid test setting")
 
     # Override the decoding parameters of Seq2SeqTrainer
     # training_args_dict = training_args.to_dict()
@@ -169,6 +184,7 @@ def main():
         '--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal_test')
+    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'manual_jailbreaks'])
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -184,6 +200,7 @@ def main():
     custom_args = {
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
+        'test_setting': cmd_args.test_setting,
     }
 
     input_args = {
