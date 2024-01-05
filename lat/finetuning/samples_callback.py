@@ -1,6 +1,7 @@
 
 from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
-from llmtuner.data import get_dataset, preprocess_dataset, split_dataset
+from llmtuner.data import get_dataset, split_dataset
+from lat.data.preprocess import preprocess_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.misc import get_logits_processor
 

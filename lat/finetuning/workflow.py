@@ -3,7 +3,8 @@
 from typing import TYPE_CHECKING, Optional, List
 from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
 
-from llmtuner.data import get_dataset, preprocess_dataset, split_dataset
+from llmtuner.data import get_dataset, split_dataset
+from lat.data.preprocess import preprocess_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.misc import get_logits_processor
 from llmtuner.extras.ploting import plot_loss
@@ -37,16 +38,13 @@ def run_sft(
 	custom_args=None,
 ):
 	model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train, stage="sft")
-	print(f"Loading data from {data_args.dataset_dir}... ")
+	print(f"Loading data from {data_args.dataset_dir} with template {data_args.template}... ")
 	orig_dataset = get_dataset(model_args, data_args)
+	print(orig_dataset[0])
 	data_split = split_dataset(orig_dataset, data_args, training_args)
 	train_dataset = data_split["train_dataset"]
 	eval_dataset = data_split["eval_dataset"] if "eval_dataset" in data_split else None
 	processed_train_dataset = preprocess_dataset(train_dataset, tokenizer, data_args, training_args, stage="sft")
-
-	# assert not training_args.predict_with_generate
-	if training_args.predict_with_generate:
-		tokenizer.padding_side = "left" # use left-padding in generation
 
 	data_collator = DataCollatorForSeq2Seq(
 		tokenizer=tokenizer,
