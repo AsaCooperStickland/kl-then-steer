@@ -4,63 +4,14 @@ import random
 import os
 import torch
 from tqdm import tqdm
-
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
+
+from steering_data import *
 
 from repe import repe_pipeline_registry
 repe_pipeline_registry()
 from repe import rep_control_reading_vec
 
-
-def primary_emotions_concept_dataset(data_dir, mode):
-	emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
-	raw_data = {}
-	for emotion in emotions:
-		with open(os.path.join(data_dir, 'repe', 'emotions', f'{emotion}.json')) as file:
-			loaded = list(set(json.load(file)))
-			if mode == 'train':
-				loaded = loaded[:160]
-			elif mode == 'test':
-				loaded = loaded[160:200]
-			user_prompts = [f'Consider the {emotion} of the following scenario:\nScenario: {scenario}'
-				for scenario in loaded]
-			raw_data[emotion] = [[user_prompt, ''] for user_prompt in user_prompts]
-
-	formatted_data = {}
-	for emotion in emotions:
-		c_e, o_e = raw_data[emotion], [prompt for k,v in raw_data.items() if k != emotion for prompt in v]
-		random.shuffle(o_e)
-
-		formatted_data[emotion] = [[c,o] for c,o in zip(c_e, o_e)]
-	return formatted_data
-
-def get_happiness_dataset(data_dir, mode):
-	formatted_data = primary_emotions_concept_dataset(data_dir, mode)
-	return {'happiness': formatted_data['happiness']}
-
-def get_refusal_pairs(data_dir, mode="train"):
-	assert mode in ["train", "test"]
-
-	with open(os.path.join(data_dir, "refusal/refusal_data_A_B.json")) as file:
-		raw_data = json.load(file)
-	if mode == "train":
-		raw_data = raw_data[:int(0.8 * len(raw_data))]
-	else:
-		raw_data = raw_data[int(0.8 * len(raw_data)):]
-
-	c_e, o_e = [], []
-	for item in raw_data:
-		question = item["question"]
-		pos_answer = item["answer_matching_behavior"].strip()
-		neg_answer = item["answer_not_matching_behavior"].strip()
-		pos_example = (question, pos_answer)
-		neg_example = (question, neg_answer)
-		c_e.append(neg_example)
-		o_e.append(pos_example)
-	
-	pairs = list(zip(*[c_e, o_e]))
-	data = {"refusal": pairs}
-	return data
 
 def create_labels(data):
 	train_labels = []
@@ -83,12 +34,12 @@ def preprocess_steering_data(data):
 		output_data[category] = labeled
 	return output_data
 
-def split_data(data, split_ratio=0.8):
-	train_data, val_data = {}, {}
-	for category, labeled in data.items():
-		train_data[category] = {'data': labeled['data'][:int(split_ratio * len(labeled['data']))], 'labels': labeled['labels'][:int(split_ratio * len(labeled['labels']))]}
-		val_data[category] = {'data': labeled['data'][int(split_ratio * len(labeled['data'])):], 'labels': labeled['labels'][int(split_ratio * len(labeled['labels'])):]}
-	return train_data, val_data
+# def split_data(data, split_ratio=0.8):
+# 	train_data, val_data = {}, {}
+# 	for category, labeled in data.items():
+# 		train_data[category] = {'data': labeled['data'][:int(split_ratio * len(labeled['data']))], 'labels': labeled['labels'][:int(split_ratio * len(labeled['labels']))]}
+# 		val_data[category] = {'data': labeled['data'][int(split_ratio * len(labeled['data'])):], 'labels': labeled['labels'][int(split_ratio * len(labeled['labels'])):]}
+# 	return train_data, val_data
 
 
 class Steering:
