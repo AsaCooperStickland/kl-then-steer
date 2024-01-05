@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--steering_coeff', type=float, default=None)
+    parser.add_argument('--template', default='llama2chatsimple')
     cmd_args = parser.parse_args()
 
     os.environ['WANDB_PROJECT'] = 'lat'
@@ -48,8 +49,7 @@ def main():
         "stage": "sft",
         "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
         "do_train": True,
-        # "template": "default",
-        "template": "llama2chatsimple",
+        "template": cmd_args.template,
         'dataset_dir': cmd_args.dataset_dir,
         # "dataset": "alpaca_gpt4_en",
         "dataset": cmd_args.dataset,
