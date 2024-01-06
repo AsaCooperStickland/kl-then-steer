@@ -1,6 +1,5 @@
 import os
 import argparse
-import datetime
 import sys
 import json
 import jsonlines
@@ -9,12 +8,10 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Optional, List
 
-from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
+from transformers import Seq2SeqTrainingArguments
 from llmtuner.model import load_model_and_tokenizer, get_train_args
 from llmtuner.extras.callbacks import LogCallback
-from repe import rep_control_reading_vec
 from lat.utils import system_prompt, data_path, jailbreaks_path
-from lat.finetuning.steering import Steering
 from lat.finetuning.trainer import SteeringTrainer
 
 if TYPE_CHECKING:
@@ -38,18 +35,6 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     # Define the layer range and block name for steering
     layer_ids = list(range(-11, -30, -1))
     block_name = "decoder_block"
-
-    # Initialize Steering and WrappedReadingVecModel
-    # print(model)
-    # trainer.model.to("cuda")
-    # trainer.model.to(torch.bfloat16)
-    # model_to_steer = trainer.model.model if custom_args['finetuning_type'] == 'lora' else trainer.model
-    # steering = Steering(custom_args['steering_dataset'], model_to_steer,
-    #                           tokenizer, custom_args['steering_data_path'], custom_args)
-    # trainer.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(model_to_steer, tokenizer)
-    # trainer.wrapped_model.unwrap()
-    # trainer.wrapped_model.wrap_block(layer_ids, block_name=block_name)
-
 
     # Define parameters for generation
     max_new_tokens = 400
@@ -106,10 +91,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
 
 def run_generation(
     model_args: "ModelArguments",
-    data_args: "DataArguments",
     training_args: "Seq2SeqTrainingArguments",
     finetuning_args: "FinetuningArguments",
-    generating_args: "GeneratingArguments",
     callbacks: Optional[List["TrainerCallback"]] = None,
     custom_args=None,
 ):
@@ -121,7 +104,7 @@ def run_generation(
         
     questions = []
     
-    file_path = '/scratch/alc9734/latent-adversarial-training/datasets/refusal/filtered_questions.jsonl'
+    file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
     
     # Open the JSONL file and extract questions.
     with jsonlines.open(file_path) as reader:
@@ -139,7 +122,7 @@ def run_generation(
     )
 
     if custom_args['test_setting'] == "manual_jailbreaks":
-        with open(jailbreaks_path, "r") as f:
+        with open(f"{custom_args['base_directory']}/{jailbreaks_path}", "r") as f:
             jailbreaks = json.load(f)
         for jailbreak in jailbreaks:
             jailbreak_name = jailbreak["name"]
@@ -155,15 +138,7 @@ def run_generation(
         generate_with_vector(trainer, tokenizer, questions,
                              "vanilla_steering", custom_args)
     else:
-        raise ValueError("Invalid test setting")
-
-    # Override the decoding parameters of Seq2SeqTrainer
-    # training_args_dict = training_args.to_dict()
-    # training_args_dict.update(dict(
-    #     generation_max_length=training_args.generation_max_length or data_args.cutoff_len,
-    # generation_num_beams=data_args.eval_num_beams or training_args.generation_num_beams
-    # ))
-    # training_args = Seq2SeqTrainingArguments(**training_args_dict)
+        raise ValueError(f"Invalid test setting: {custom_args['test_setting']}, must be one of 'manual_jailbreaks' or 'vanilla'")
 
 
 def main():
@@ -180,6 +155,7 @@ def main():
                         default="/scratch/alc9734/latent-adversarial-training/results/run_1")
     parser.add_argument('--steering_data_path',
                         default="/scratch/alc9734/latent-adversarial-training/datasets")
+    parser.add_argument('--base_directory', default='/scratch/alc9734/latent-adversarial-training/')
     parser.add_argument(
         '--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')
@@ -198,6 +174,7 @@ def main():
                     'meta-llama/Llama-2-7b-chat-hf' : f'{cmd_args.output_dir}/llama-2-7b-chat',}
                     
     custom_args = {
+        "base_directory": cmd_args.base_directory,
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
         'test_setting': cmd_args.test_setting,
@@ -210,8 +187,6 @@ def main():
         "template": "llama2chatsimple",
         'dataset_dir': cmd_args.dataset_dir,
         "dataset": cmd_args.dataset,
-        # "dataset": "alpaca_gpt4_en",
-        # "template": "default",
         "finetuning_type": cmd_args.finetuning_type,
         "lora_target": "q_proj,v_proj",
         "output_dir": cmd_args.output_dir,
@@ -245,8 +220,8 @@ def main():
     directory_or_model_name_or_path = name_to_path[custom_args['model_name_or_path']] if custom_args['model_name_or_path'] in name_to_path else custom_args['model_name_or_path']
     custom_args['results_path'] = f"{directory_or_model_name_or_path}/{output_folder_name}"
     os.makedirs(f"{directory_or_model_name_or_path}/{output_folder_name}", exist_ok=True)
-    run_generation(model_args, data_args, training_args, finetuning_args,
-         generating_args, callbacks, custom_args)
+    run_generation(model_args, training_args, finetuning_args,
+         callbacks, custom_args)
 
 
 if __name__ == "__main__":
