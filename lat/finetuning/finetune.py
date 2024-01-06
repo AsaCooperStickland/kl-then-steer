@@ -47,7 +47,7 @@ def main():
 
     input_args = {
         "stage": "sft",
-        "model_name_or_path": "meta-llama/Llama-2-7b-chat-hf",
+        "model_name_or_path": "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf",
         "do_train": True,
         "template": cmd_args.template,
         'dataset_dir': cmd_args.dataset_dir,
@@ -71,7 +71,6 @@ def main():
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,
         "val_size": 0.2,
-
         "do_sample": True,
         "max_new_tokens": 80,
         "temperature": 1.0,

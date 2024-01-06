@@ -2,7 +2,7 @@ import json
 import torch
 from tqdm import tqdm
 
-from lat.generate_steering_vectors import generate_single_steering_vector
+from lat.legacy.generate_steering_vectors import generate_single_steering_vector
 
 
 def get_vec(directory, layer, vec_type=""):

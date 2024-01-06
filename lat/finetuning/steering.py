@@ -101,6 +101,8 @@ class Steering:
 		total_pairs = len(data['labels'])
 
 		# Generating random indices for the pairs
+		num_pairs = min(num_pairs, total_pairs)
+		print(f"Sampling {num_pairs} pairs from {total_pairs} pairs.")
 		sampled_indices = random.sample(range(total_pairs), num_pairs)
 
 		# Extracting the sampled pairs

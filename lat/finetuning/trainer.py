@@ -64,3 +64,15 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         return (loss, outputs) if return_outputs else loss
+    
+    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+        """
+        Will save the model, so you can reload it using `from_pretrained()`.
+
+        Will only save from the main process.
+        """
+        
+        self.steering.reset()
+        self.steering.wrapped_model.unwrap()
+        super().save_model(output_dir, _internal_call)
+        self.steering.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
