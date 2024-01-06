@@ -87,3 +87,66 @@ register_template(
     system=system_prompt,
     sep=[]
 )
+
+register_template(
+    name="llama2_empty_system_prompt",
+    prefix=[
+        "<<SYS>>\n{{system}}\n<</SYS>>\n\n"
+    ],
+    prompt=[
+        "[INST] {{query}} [/INST]"
+    ],
+    system='',
+    sep=[]
+)
+
+# default after https://github.com/facebookresearch/llama/pull/626/files ?
+register_template(
+    name="llama2_no_system_prompt",
+    prefix=[
+        ''
+    ],
+    prompt=[
+        "[INST] {{query}} [/INST]"
+    ],
+    system='',
+    sep=[]
+)
+
+register_template(
+    name="llama2",
+    prefix=[
+        "<<SYS>>\n{{system}}\n<</SYS>>\n\n"
+    ],
+    prompt=[
+        "[INST] {{query}} [/INST]"
+    ],
+    system=(
+        "You are a helpful, respectful and honest assistant. "
+        "Always answer as helpfully as possible, while being safe. "
+        "Your answers should not include any harmful, unethical, "
+        "racist, sexist, toxic, dangerous, or illegal content. "
+        "Please ensure that your responses are socially unbiased and positive in nature.\n\n"
+        "If a question does not make any sense, or is not factually coherent, "
+        "explain why instead of answering something not correct. "
+        "If you don't know the answer to a question, please don't share false information."
+    ),
+    sep=[]
+)
+
+register_template(
+    name="default",
+    prefix=[
+        "{{system}}"
+    ],
+    prompt=[
+        "Human: {{query}}\nAssistant:"
+    ],
+    system=(
+        "A chat between a curious user and an artificial intelligence assistant. "
+        "The assistant gives helpful, detailed, and polite answers to the user's questions."
+    ),
+    sep=[
+        "\n"
+    ]
+)
