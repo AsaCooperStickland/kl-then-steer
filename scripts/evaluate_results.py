@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from openai import BadRequestError
 
@@ -28,12 +29,16 @@ def remove_repeated_letters(input_string):
         return False, input_string
     
 
-def categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type):
+def categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type, evaluate_vanilla=False):
     """Categorizes the results using the classifier and stores them as JSON."""
     categorized_data = {}
 
     all_prompts = []
     for multiplier_data in results:
+        multiplier = multiplier_data["multiplier"]
+        if evaluate_vanilla:
+            if multiplier != 0.0:
+                continue
         for ans in multiplier_data["answers"]:
             input_prompt = {
                 "question": ans["question"], "answer": ans["answer"]}
@@ -45,8 +50,10 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
     # Send prompts in batches and get responses
     cleaned_prompts = []
     for prompt_idx, prompt in enumerate(all_prompts):
-        include, prompt = remove_repeated_letters(prompt)
+        _, prompt = remove_repeated_letters(prompt)
         cleaned_prompts.append(prompt)
+
+    print(f"Evaluating {len(cleaned_prompts)} prompts.")
             
     batch_size = 1
     batched_prompts_gen = batch_prompts(cleaned_prompts, batch_size)
@@ -57,6 +64,9 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
     response_idx = 0
     for multiplier_data in results:
         multiplier = multiplier_data["multiplier"]
+        if evaluate_vanilla:
+            if multiplier != 0.0:
+                continue
         multiplier_key = f"multiplier_{multiplier}"
         categorized_data[multiplier_key] = []
 
@@ -88,7 +98,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
             categorized_data[multiplier_key].append(entry)
 
     # Store the data
-    with open(f"{directory}/{question_type}categorized_results.json", "w") as file:
+    with open(f"{directory}/{question_type}_categorized_results.json", "w") as file:
         json.dump(categorized_data, file)
 
     return categorized_data
@@ -122,22 +132,22 @@ def get_average_scores_json(categorized_data):
     return average_scores
 
 
-def get_csv_from_json_scores(average_scores, print_header=True):
+def get_csv_from_json_scores(average_scores, question_type="", steering_dataset="refusal_test", print_header=True):
     """Gets a CSV from the average scores. Separate out different categories"""
     category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
                      "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
     if print_header:
         # csv = ", , average, , , nationality_bias, , ,race_bias,,,gender_bias,,,political_bias,,,illegal_activity,,,capability,,,human_only,,,power_seeking,,,\n"
-        csv = ", "
+        csv = ", , , "
         for category in category_list:
             csv += f"{category},"
         csv += "\n"
-        csv += "Multiplier,pca\n"
+        csv += "Question type, Steering dataset, Multiplier,pca\n"
     else:
         csv = ""
     for multiplier_key, multiplier_data in average_scores.items():
         multiplier_key = multiplier_key.replace("multiplier_", "")
-        csv += f"{multiplier_key},"
+        csv += f"{question_type}, {steering_dataset},{multiplier_key},"
         for category in category_list:
             for vec_name in ["pca"]:
                 # if "n/a" in multiplier_data:
@@ -150,33 +160,41 @@ def get_csv_from_json_scores(average_scores, print_header=True):
 
 
 def main():
-    evaluate = False
+    overwrite = False
     path = "/scratch/alc9734/latent-adversarial-training/results/"
     models = ["run_2/checkpoint-9000", "llama-2-7b-chat"]
     paths = [path + model for model in models]
     for path in paths:
         directory = f"{path}/vanilla_steering"
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
-        question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
+        jail_breaks = ["4chan", "aligned", "confidant", "machiavelli"]
+        # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
+        question_types = ["refusal_test"]
+        all_question_types = [f"{question_type}_{jail_break}" for jail_break in jail_breaks for question_type in question_types]
         # question_types = ["vanilla_"]
-        for i, question_type in enumerate(question_types):
+        for i, results_type in enumerate(all_question_types):
+            if i > 0:
+                overwrite = True
             results = json.load(
-                open(f"{directory}/{question_type}results.json", "r"))
+                open(f"{directory}/{results_type}_results.json", "r"))
             with open("lat/evaluation_prompt.txt", "r") as f:
                 classifier_prompt = f.read()
             model_name = "gpt-3.5-turbo-16k-0613"
             call_type = "sample"  # or "logprobs"
-            if evaluate:
+            categorized_results_file = f"{directory}/{results_type}_categorized_results.json"
+            if overwrite or not os.path.exists(categorized_results_file):
                 categorized_results = categorize_results(
-                    results, classifier_prompt, model_name, call_type, directory, question_type)
+                    results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_vanilla=True)
             else:
-                with open(f"{directory}/{question_type}categorized_results.json", "r") as f:
+                with open(categorized_results_file, "r") as f:
                     categorized_results = json.load(f)
             average_scores = get_average_scores_json(categorized_results)
+            jail_break_type = results_type.split("_")[-1]
+            question_type = "_".join(results_type.split("_")[:-1])
             # print(average_scores, "average scores")
             csv_scores = get_csv_from_json_scores(
-                average_scores, print_header=i == 0)
-            print(f"Results for {question_type} from model {path}:")
+                average_scores, question_type=question_type, steering_dataset=jail_break_type, print_header=i == 0)
+            print(f"Results for {results_type} from model {path}:")
             print(csv_scores)
 
 
