@@ -4,7 +4,6 @@ import torch
 import numpy as np
 import torch.nn as nn
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
-from transformers import Seq2SeqTrainer
 
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.logging import get_logger
@@ -15,40 +14,19 @@ if TYPE_CHECKING:
 from transformers.modeling_utils import unwrap_model
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 
-from tqdm import tqdm
-import random
+from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
 
-from repe import rep_control_reading_vec
 from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
-from steering import Steering
 
 
 logger = get_logger(__name__)
 
 
 class SteeringTrainer(CustomSeq2SeqTrainer):
-    def __init__(self, custom_args, **kwargs):
+    def __init__(self, custom_args, steering, **kwargs):
         super().__init__(**kwargs)
         self.custom_args = custom_args
-
-        self.layer_id = list(range(-11, -30, -1))
-        self.block_name = "decoder_block"
-
-        # self.model:
-        # PeftModelForCausalLM(
-        #   (base_model): LoraModel(
-        #   (model): LlamaForCausalLM(
-        #     (model): LlamaModel(
-
-        self.steering = Steering(self.custom_args['steering_dataset'], self.model.model, self.tokenizer, self.custom_args['steering_data_path'])
-
-        self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model.model, self.tokenizer)
-        self.wrapped_model.unwrap()
-        self.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
-        self.wrapped_model.reset()
-    
-    def sample_coeff(self):
-        return 3.0 if random.random() < 0.5 else 0.0
+        self.steering = steering
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -56,10 +34,7 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
 
         Subclass and override for custom behavior.
         """
-        coeff = self.sample_coeff()
-        activations = self.steering.get_shift(coeff=coeff, layer_id=self.layer_id)
-        self.wrapped_model.reset()
-        self.wrapped_model.set_controller(self.layer_id, activations, self.block_name)
+        self.steering.do_shift(mode='train')
         
         if self.label_smoother is not None and "labels" in inputs:
             labels = inputs.pop("labels")
@@ -67,7 +42,7 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
             labels = None
         outputs = model(**inputs)
 
-        self.wrapped_model.reset()
+        self.steering.reset()
 
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
@@ -89,3 +64,15 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         return (loss, outputs) if return_outputs else loss
+    
+    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+        """
+        Will save the model, so you can reload it using `from_pretrained()`.
+
+        Will only save from the main process.
+        """
+        
+        self.steering.reset()
+        self.steering.wrapped_model.unwrap()
+        super().save_model(output_dir, _internal_call)
+        self.steering.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)

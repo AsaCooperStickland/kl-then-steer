@@ -3,10 +3,10 @@ import json
 import jsonlines
 from dotenv import load_dotenv
 
-from lat.modeling import Llama7BChatHelper
+from lat.legacy.modeling import Llama7BChatHelper
 from lat.data import ComparisonDataset
 from lat.utils import system_prompt, data_path, jailbreaks_path
-from lat.generation_utils import generate_with_vector
+from lat.legacy.generation_utils import generate_with_vector
 
 load_dotenv()
 token = os.getenv("HF_TOKEN")

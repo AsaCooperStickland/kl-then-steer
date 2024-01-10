@@ -3,8 +3,8 @@ import json
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
-from lat.modeling import Llama7BChatHelper
-from lat.data import ComparisonDataset
+from lat.legacy.modeling import Llama7BChatHelper
+from lat.data.data import ComparisonDataset
 from lat.utils import system_prompt, data_path
 
 
