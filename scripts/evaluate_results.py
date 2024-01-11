@@ -3,7 +3,7 @@ import os
 import re
 from openai import BadRequestError
 
-from lat.api_utils import get_content, extract_score, call_model_with_retries_batched, batch_prompts
+from lat.api_utils import extract_score, call_model_with_retries_batched, batch_prompts
 
 
 def remove_repeated_letters(input_string):
@@ -77,8 +77,8 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
             # Constructing the prompt for classification
             response = all_responses[response_idx]
             response_idx += 1
-            classification_output = get_content(response, model_name)
-            if isinstance(classification_output, BadRequestError):
+            classification_output = response.content
+            if response.stop_reason == "bad_request_error":
                 classification_output = "{'score': 1}"
             # print(f"{classification_output}\n\nthis is the classification_output")
             score = extract_score(classification_output)
@@ -162,7 +162,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 def main():
     overwrite = False
     path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_2/checkpoint-9000", "llama-2-7b-chat"]
+    models = ["run_no_steer_full/checkpoint-9000"] # ["run_2/checkpoint-9000", "llama-2-7b-chat"]
     paths = [path + model for model in models]
     for path in paths:
         directory = f"{path}/vanilla_steering"

@@ -1,7 +1,7 @@
 # Inspired by: https://github.com/huggingface/transformers/blob/v4.29.2/examples/pytorch/summarization/run_summarization.py
 
 from typing import TYPE_CHECKING, Optional, List
-from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
+from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
 from llmtuner.data import get_dataset, split_dataset
 from lat.data.preprocess import preprocess_dataset
@@ -61,20 +61,36 @@ def run_sft(
 	training_args = Seq2SeqTrainingArguments(**training_args_dict)
 
 	model = model.to(torch.bfloat16)
-	steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
+	if custom_args['do_steer']:
+		steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
+		print(f"Steering dataset: '{custom_args['steering_dataset']}' found at: {custom_args['steering_data_path']}")
+	else:
+		steering = None
+		print("Warning: steering is not enabled.")
 	samples_callback = SamplesCallback(train_dataset, eval_dataset, data_args, training_args, generating_args, custom_args, steering)
 	callbacks.append(samples_callback)
-	trainer = SteeringTrainer(
-		custom_args=custom_args,
-		steering=steering,
-		model=model,
-		args=training_args,
-		tokenizer=tokenizer,
-		data_collator=data_collator,
-		callbacks=callbacks,
-		compute_metrics=ComputeMetrics(tokenizer) if training_args.predict_with_generate else None,
-		train_dataset=processed_train_dataset,
-	)
+	if custom_args['do_steer']:
+		trainer = SteeringTrainer(
+			custom_args=custom_args,
+			steering=steering,
+			model=model,
+			args=training_args,
+			tokenizer=tokenizer,
+			data_collator=data_collator,
+			callbacks=callbacks,
+			compute_metrics=ComputeMetrics(tokenizer) if training_args.predict_with_generate else None,
+			train_dataset=processed_train_dataset,
+		)
+	else:
+		trainer = Seq2SeqTrainer(
+			model=model,
+			args=training_args,
+			tokenizer=tokenizer,
+			data_collator=data_collator,
+			callbacks=callbacks,
+			compute_metrics=ComputeMetrics(tokenizer) if training_args.predict_with_generate else None,
+			train_dataset=processed_train_dataset,
+		)
 
 	print("Starting training...")
 	train_result = trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
