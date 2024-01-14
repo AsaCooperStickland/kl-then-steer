@@ -26,9 +26,9 @@ def primary_emotions_concept_dataset(data_dir, mode):
 		formatted_data[emotion] = [[c,o] for c,o in zip(c_e, o_e)]
 	return formatted_data
 
-def get_happiness_dataset(data_dir, mode):
+def get_single_emotion_dataset(data_dir, mode, emotion):
 	formatted_data = primary_emotions_concept_dataset(data_dir, mode)
-	return {'happiness': formatted_data['happiness']}
+	return {emotion, formatted_data[emotion]}
 
 def get_refusal_pairs(data_dir, mode="train"):
 	assert mode in ["train", "test"]

@@ -169,7 +169,7 @@ def main():
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
         jail_breaks = ["4chan", "aligned", "confidant", "machiavelli"]
         # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
-        question_types = ["refusal_test"]
+        question_types = ["refusal"]
         all_question_types = [f"{question_type}_{jail_break}" for jail_break in jail_breaks for question_type in question_types]
         # question_types = ["vanilla_"]
         for i, results_type in enumerate(all_question_types):

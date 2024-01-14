@@ -110,6 +110,8 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
         # Check cache first
         cached_responses = [CACHE[(model_name, prompt)]
                             for prompt in prompts if (model_name, prompt) in CACHE]
+        cached_prompts = [prompt for prompt in prompts if (
+            model_name, prompt) in CACHE]
         uncached_prompts = [prompt for prompt in prompts if (
             model_name, prompt) not in CACHE]
 
@@ -128,8 +130,14 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
             # save cache
             with open('cache.pkl', 'wb') as f:
                 pickle.dump(CACHE, f)
-
-        responses.extend(cached_responses)
+                
+        for cached_prompt, cached_response in zip(cached_prompts, cached_responses):
+            if not isinstance(cached_response, ModelResponse):
+                cached_response = get_generic_response(
+                    cached_response, model_name)
+                CACHE[(model_name, cached_prompt)] = cached_response
+            responses.append(cached_response)
+        # responses.extend(cached_responses)
 
     return responses
 

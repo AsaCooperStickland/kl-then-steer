@@ -4,6 +4,7 @@ import sys
 import json
 import jsonlines
 import torch
+from datetime import datetime
 from dotenv import load_dotenv
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Optional, List
@@ -13,6 +14,7 @@ from llmtuner.model import load_model_and_tokenizer, get_train_args
 from llmtuner.extras.callbacks import LogCallback
 from lat.utils import system_prompt, data_path, jailbreaks_path
 from lat.finetuning.trainer import SteeringTrainer
+from lat.finetuning.steering import Steering
 
 if TYPE_CHECKING:
     from transformers import TrainerCallback
@@ -47,12 +49,12 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     # Loop through each multiplier
     for multiplier in [-3.0, -1.5, 0.0, 1.5, 3.0]:
         answers = []
-        trainer.wrapped_model.reset()
-        activations = trainer.steering.get_shift(coeff=multiplier, layer_id=layer_ids, num_pairs=200)
+        trainer.steering.wrapped_model.reset()
+        activations = trainer.steering.get_shift(coeff=multiplier, layer_id=layer_ids, mode="test", num_pairs=200)
         for key in activations:
             activations[key] = activations[key].to(torch.bfloat16)
-        trainer.wrapped_model.set_controller(layer_ids, activations, block_name)
-        trainer.wrapped_model.to(torch.bfloat16)
+        trainer.steering.wrapped_model.set_controller(layer_ids, activations, block_name)
+        trainer.steering.wrapped_model.to(torch.bfloat16)
 
         # Batch processing of questions
         for i in tqdm(range(0, len(questions), batch_size)):
@@ -112,9 +114,11 @@ def run_generation(
             if 'question' in item:
                 item["question"] = prompt_format(item["question"])
                 questions.append(item)
-
+    
+    steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
     trainer = SteeringTrainer(
         model=model,
+        steering=steering,
         args=training_args,
         custom_args=custom_args,
         tokenizer=tokenizer,
@@ -161,6 +165,11 @@ def main():
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal_test')
     parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'manual_jailbreaks'])
+    parser.add_argument('--samples_dir', default='samples')
+    parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
+    parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
+    parser.add_argument('--num_return_sequences', type=int, default=2)
+    parser.add_argument('--steering_coeff', type=float, default=None)
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -178,6 +187,12 @@ def main():
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
         'test_setting': cmd_args.test_setting,
+        'samples_dir': cmd_args.samples_dir,
+        'samples_freq': cmd_args.samples_freq,
+        'run_name': cmd_args.run_name,
+        'mix_with_clean_data': False,
+        'subsample_steering_data': False,
+        "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }
 
     input_args = {
