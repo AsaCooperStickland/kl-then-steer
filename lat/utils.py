@@ -3,7 +3,7 @@ data_path = "datasets/refusal/refusal_data_A_B.json"
 jailbreaks_path = "datasets/refusal/jailbreaks.json"
 
 criminal_concepts = ["crime", "criminal", "shoplifting", "murder", "fraud", "spearphishing", "burglary", "blackmail", "prison",
-                     "illegal", "armed_robbery", "hacking", "social_engineering", "terrorism", "weapons", "guns", "knuckledusters"
+                     "illegal", "armed_robbery", "hacking", "social_engineering", "terrorism", "weapons", "guns", "knuckledusters",
                      "stabbing", "drug_dealing", "gangsters", "mafia", "shooting", "drug_trafficking", "insider_trading", "phishing", "sql_injection"
                      "scam"]
                 
@@ -50,7 +50,7 @@ neutral_concepts += [
     "shapes", "sizes", "distances", "speeds", "frequencies",
     "patterns", "rhythms", "harmonies", "melodies", "noises",
     "silence", "echoes", "shadows", "reflections", "illusions",
-    "theories", "concepts", "principles", "laws", "hypotheses",
+    "theories", "principles", "laws", "hypotheses",
     "questions", "answers", "problems", "solutions", "discoveries",
     "inventions", "creations", "artifacts", "relics", "treasures",
     "myths", "legends", "stories", "tales", "fables",

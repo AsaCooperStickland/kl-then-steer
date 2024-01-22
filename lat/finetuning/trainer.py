@@ -68,4 +68,4 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         self.steering.reset()
         self.steering.wrapped_model.unwrap()
         super().save_model(output_dir, _internal_call)
-        self.steering.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
+        self.steering.wrapped_model.wrap_block(self.steering.layer_id, block_name=self.steering.block_name)

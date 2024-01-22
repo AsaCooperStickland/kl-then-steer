@@ -162,15 +162,16 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 def main():
     overwrite = True
     path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_no_steer_full/checkpoint-9000", "run_2/checkpoint-9000", "llama-2-7b-chat"]
+    models = ["run_no_steer_full/checkpoint-1000", "run_2/checkpoint-1000"] #, "llama-2-7b-chat"]
     paths = [path + model for model in models]
     for path in paths:
         directory = f"{path}/vanilla_steering"
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
-        jail_breaks = ["4chan", "aligned", "confidant", "machiavelli"]
+        jail_breaks = [""] # , "_4chan", "_aligned", "_confidant", "_machiavelli"]
+        jail_breaks = ["", "_4chan", "_aligned", "_confidant"]
         # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
         question_types = ["refusal"]
-        all_question_types = [f"{question_type}_{jail_break}" for jail_break in jail_breaks for question_type in question_types]
+        all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
         # question_types = ["vanilla_"]
         for i, results_type in enumerate(all_question_types):
             results = json.load(
@@ -182,7 +183,7 @@ def main():
             categorized_results_file = f"{directory}/{results_type}_categorized_results.json"
             if overwrite or not os.path.exists(categorized_results_file):
                 categorized_results = categorize_results(
-                    results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_vanilla=False)
+                    results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_vanilla=True)
             else:
                 with open(categorized_results_file, "r") as f:
                     categorized_results = json.load(f)

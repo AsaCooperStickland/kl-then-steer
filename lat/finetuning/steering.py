@@ -75,6 +75,8 @@ class Steering:
 				data = get_single_emotion_dataset(data_dir, emotion, mode=mode)
 			elif dataset_name == 'large_scale_concept':
 				data = large_scale_concept_dataset(data_dir, mode=mode)
+				# extend data with quadratic prompts
+				# data.update(large_scale_concept_dataset_quadratic(data_dir, mode=mode, consider_prompt=False))
 				# extend data with different prompts
 				data.update(large_scale_concept_dataset(data_dir, mode=mode, consider_prompt=False))
 				# also include refusal
@@ -96,6 +98,8 @@ class Steering:
 	
 	def sample_coeff(self):
 		c = self.custom_args['steering_coeff']
+		# sample a range between -1 and 1
+		c = c * random.uniform(-1, 1)
 		return (c if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else c
 
 	def sample_pairs(self, data, num_pairs):

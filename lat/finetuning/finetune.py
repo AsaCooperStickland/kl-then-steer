@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=3)
-    parser.add_argument('--samples_dir', default='samples')
+    parser.add_argument('--samples_dir', default='/scratch/alc9734/latent-adversarial-training/samples')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
