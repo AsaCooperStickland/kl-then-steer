@@ -1,4 +1,3 @@
-import json
 from collections import defaultdict
 import pickle
 import concurrent.futures
@@ -9,9 +8,9 @@ import asyncio
 import os
 from collections import namedtuple
 from typing import Dict, List, Tuple, Union
+from dataclasses import dataclass
 from tqdm import tqdm
 from dotenv import load_dotenv
-from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from anthropic import Anthropic
 from openai import OpenAI, BadRequestError
@@ -37,16 +36,40 @@ anyscale_client = OpenAI(
            api_key=anyscale_token)
 
 
-def get_content(response, model_name):
+@dataclass
+class ModelResponse:
+    model_name: str
+    content: str
+    stop_reason: str
+
+
+def get_generic_response(response, model_name):
     if isinstance(response, BadRequestError):
-        return response
+        model_response = ModelResponse(
+            model_name=model_name,
+            content="",
+            stop_reason="bad_request_error",
+        )
+        return model_response
     if model_name in CHAT_MODELS or model_name in ANYSCALE_MODELS:
         content = response.choices[0].message.content
+        stop_reason = response.choices[0].finish_reason
+        model_response = ModelResponse(
+            model_name=model_name,
+            content=content,
+            stop_reason=stop_reason,
+        )
     elif model_name in ANTHROPIC_MODELS:
         content = response.completion
+        stop_reason = response.stop_reason
+        model_response = ModelResponse(
+            model_name=model_name,
+            content=content,
+            stop_reason=stop_reason,
+        )
     else:
         raise ValueError(f"Model {model_name} not supported.")
-    return content
+    return model_response
 
 
 def extract_score(classification_str):
@@ -60,8 +83,8 @@ def extract_score(classification_str):
     return None  # or return 0 or any default value
 
 
-evaluate = False
-if evaluate:
+do_cache = True
+if do_cache:
     # load pickled cache if it exists
     if os.path.exists('cache.pkl'):
         with open('cache.pkl', 'rb') as f:
@@ -87,6 +110,8 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
         # Check cache first
         cached_responses = [CACHE[(model_name, prompt)]
                             for prompt in prompts if (model_name, prompt) in CACHE]
+        cached_prompts = [prompt for prompt in prompts if (
+            model_name, prompt) in CACHE]
         uncached_prompts = [prompt for prompt in prompts if (
             model_name, prompt) not in CACHE]
 
@@ -97,14 +122,23 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
                 call_type=call_type,
                 temperature=temperature,
             )
+            
             for prompt, response in zip(uncached_prompts, model_responses):
+                response = get_generic_response(response, model_name)
                 CACHE[(model_name, prompt)] = response
                 responses.append(response)
             # save cache
-            with open('cache.pkl', 'wb') as f:
-                pickle.dump(CACHE, f)
-
-        responses.extend(cached_responses)
+            if do_cache:
+                with open('cache.pkl', 'wb') as f:
+                    pickle.dump(CACHE, f)
+                
+        for cached_prompt, cached_response in zip(cached_prompts, cached_responses):
+            if not isinstance(cached_response, ModelResponse):
+                cached_response = get_generic_response(
+                    cached_response, model_name)
+                CACHE[(model_name, cached_prompt)] = cached_response
+            responses.append(cached_response)
+        # responses.extend(cached_responses)
 
     return responses
 

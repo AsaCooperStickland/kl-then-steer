@@ -7,7 +7,7 @@ import os
 from collections import defaultdict
 import jsonlines
 
-from lat.api_utils import get_content, call_model_with_retries_batched, batch_prompts
+from lat.api_utils import call_model_with_retries_batched, batch_prompts
 
 SAFE_MODELS = ["claude-2", "gpt-4-1106-preview"]
 
@@ -109,7 +109,7 @@ def generate_questions_for_category(category, model, documents, safe_models, exi
                 break
             for resp in responses:
                 print(resp)
-                for string_json in get_content(resp, model).splitlines():
+                for string_json in resp.content.splitlines():
                     question = parse_json_string(string_json, category)
                     print(question, "question")
                     if question and question not in question_set:

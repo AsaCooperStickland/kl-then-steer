@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
 
-from steering_data import *
+from lat.finetuning.steering_data import *
 
 from repe import repe_pipeline_registry
 repe_pipeline_registry()
@@ -70,10 +70,22 @@ class Steering:
 				data = primary_emotions_concept_dataset(data_dir, mode=mode)
 			elif dataset_name == 'refusal':
 				data = get_refusal_pairs(data_dir, mode=mode)
-			elif dataset_name == 'happiness':
-				data = get_happiness_dataset(data_dir, mode=mode)
+			elif 'emotions_' in dataset_name:
+				emotion = dataset_name.split('_')[1]
+				data = get_single_emotion_dataset(data_dir, emotion, mode=mode)
+			elif dataset_name == 'large_scale_concept':
+				data = large_scale_concept_dataset(data_dir, mode=mode)
+				# extend data with quadratic prompts
+				# data.update(large_scale_concept_dataset_quadratic(data_dir, mode=mode, consider_prompt=False))
+				# extend data with different prompts
+				data.update(large_scale_concept_dataset(data_dir, mode=mode, consider_prompt=False))
+				# also include refusal
+				data.update(get_refusal_pairs(data_dir, mode=mode))
+			else:
+				raise ValueError(f"Invalid dataset name: {dataset_name}")
 			data = preprocess_steering_data(data)
 			datasets.append(data)
+		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
 
 		self.layer_id = list(range(-11, -30, -1))
@@ -86,6 +98,8 @@ class Steering:
 	
 	def sample_coeff(self):
 		c = self.custom_args['steering_coeff']
+		# sample a range between -1 and 1
+		c = c * random.uniform(-1, 1)
 		return (c if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else c
 
 	def sample_pairs(self, data, num_pairs):

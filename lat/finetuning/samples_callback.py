@@ -1,6 +1,4 @@
-
-from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments
-from llmtuner.data import get_dataset, split_dataset
+from transformers import DataCollatorForSeq2Seq
 from lat.data.preprocess import preprocess_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.misc import get_logits_processor
@@ -11,8 +9,7 @@ from transformers import AutoTokenizer
 import os
 import pandas as pd
 import torch
-from datetime import datetime
-from tqdm import tqdm
+
 
 class SamplesCallback(TrainerCallback):
 	def __init__(self, train_dataset, eval_dataset, data_args, training_args, generating_args, custom_args, steering):
@@ -64,23 +61,25 @@ class SamplesCallback(TrainerCallback):
 
 			self.sample_and_save(state, model, prompt_mode='train', steering_mode='none')
 
-			self.steering.do_shift(mode='train')
-			self.sample_and_save(state, model, prompt_mode='train', steering_mode='train')
-			self.steering.reset()
+			if self.steering:
+				self.steering.do_shift(mode='train')
+				self.sample_and_save(state, model, prompt_mode='train', steering_mode='train')
+				self.steering.reset()
 
-			self.steering.do_shift(mode='test')
-			self.sample_and_save(state, model, prompt_mode='train', steering_mode='test')
-			self.steering.reset()
+				self.steering.do_shift(mode='test')
+				self.sample_and_save(state, model, prompt_mode='train', steering_mode='test')
+				self.steering.reset()
 
 			self.sample_and_save(state, model, prompt_mode='test', steering_mode='none')
 
-			self.steering.do_shift(mode='train')
-			self.sample_and_save(state, model, prompt_mode='test', steering_mode='train')
-			self.steering.reset()
+			if self.steering:
+				self.steering.do_shift(mode='train')
+				self.sample_and_save(state, model, prompt_mode='test', steering_mode='train')
+				self.steering.reset()
 
-			self.steering.do_shift(mode='test')
-			self.sample_and_save(state, model, prompt_mode='test', steering_mode='test')
-			self.steering.reset()
+				self.steering.do_shift(mode='test')
+				self.sample_and_save(state, model, prompt_mode='test', steering_mode='test')
+				self.steering.reset()
 
 	def sample_and_save(self, state, model, prompt_mode, steering_mode):
 		records = []

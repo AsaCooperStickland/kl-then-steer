@@ -22,11 +22,12 @@ def main():
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=3)
-    parser.add_argument('--samples_dir', default='samples')
+    parser.add_argument('--samples_dir', default='/scratch/alc9734/latent-adversarial-training/samples')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--steering_coeff', type=float, default=None)
+    parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
     cmd_args = parser.parse_args()
 
@@ -37,6 +38,7 @@ def main():
     custom_args = {
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
+        'do_steer': cmd_args.do_steer,
         'samples_dir': cmd_args.samples_dir,
         'samples_freq': cmd_args.samples_freq,
         'run_name': cmd_args.run_name,
@@ -91,7 +93,7 @@ def main():
         elif custom_args['model_name_or_path'] == 'meta-llama/Llama-2-13b-chat-hf':
             custom_args['steering_coeff'] = 3.0
         else:
-            raise Exception
+            custom_args['steering_coeff'] = 1.5
     run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
 
 if __name__ == "__main__":
