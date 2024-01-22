@@ -160,9 +160,9 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 
 
 def main():
-    overwrite = False
+    overwrite = True
     path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_no_steer_full/checkpoint-9000"] # ["run_2/checkpoint-9000", "llama-2-7b-chat"]
+    models = ["run_no_steer_full/checkpoint-9000", "run_2/checkpoint-9000", "llama-2-7b-chat"]
     paths = [path + model for model in models]
     for path in paths:
         directory = f"{path}/vanilla_steering"
@@ -173,8 +173,6 @@ def main():
         all_question_types = [f"{question_type}_{jail_break}" for jail_break in jail_breaks for question_type in question_types]
         # question_types = ["vanilla_"]
         for i, results_type in enumerate(all_question_types):
-            if i > 0:
-                overwrite = True
             results = json.load(
                 open(f"{directory}/{results_type}_results.json", "r"))
             with open("lat/evaluation_prompt.txt", "r") as f:
@@ -184,7 +182,7 @@ def main():
             categorized_results_file = f"{directory}/{results_type}_categorized_results.json"
             if overwrite or not os.path.exists(categorized_results_file):
                 categorized_results = categorize_results(
-                    results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_vanilla=True)
+                    results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_vanilla=False)
             else:
                 with open(categorized_results_file, "r") as f:
                     categorized_results = json.load(f)

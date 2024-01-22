@@ -3,6 +3,8 @@ import numpy as np
 import random
 import os
 
+from lat.utils import criminal_concepts, bad_concepts, neutral_concepts
+
 
 def primary_emotions_concept_dataset(data_dir, mode):
 	emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
@@ -24,6 +26,34 @@ def primary_emotions_concept_dataset(data_dir, mode):
 		random.shuffle(o_e)
 
 		formatted_data[emotion] = [[c,o] for c,o in zip(c_e, o_e)]
+	return formatted_data
+
+
+def large_scale_concept_dataset(data_dir, mode, consider_prompt=True):
+	concepts = criminal_concepts + bad_concepts + neutral_concepts
+	raw_data = {}
+	for concept in concepts:
+		concept_file = f"refusal/gpt-3.5-turbo-16k-0613_{concept}_generated_concept_sentences.jsonl"
+		with open(os.path.join(data_dir, concept_file)) as file:
+			loaded = list(set([json.loads(line)["sentence"] for line in file.readlines()]))
+			if mode == 'train':
+				loaded = loaded[:160]
+			elif mode == 'test':
+				loaded = loaded[160:200]
+			if consider_prompt:
+				user_prompts = [f'Think about the concept {concept} in this sentence:\n{scenario}'
+					for scenario in loaded]
+			else:
+				user_prompts = loaded
+			raw_data[concept] = [[user_prompt, ''] for user_prompt in user_prompts]
+
+	formatted_data = {}
+	for concept in criminal_concepts + bad_concepts:
+		concept_key = concept if consider_prompt else f'{concept}_no_prompt'
+		c_e, o_e = raw_data[concept_key], [prompt for k,v in raw_data.items() if concept in neutral_concepts for prompt in v]
+		random.shuffle(o_e)
+
+		formatted_data[concept_key] = [[c,o] for c,o in zip(c_e, o_e)]
 	return formatted_data
 
 def get_single_emotion_dataset(data_dir, mode, emotion):

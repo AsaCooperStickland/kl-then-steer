@@ -1,8 +1,3 @@
-import os
-import json
-import torch
-import numpy as np
-import torch.nn as nn
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from llmtuner.extras.constants import IGNORE_INDEX
@@ -13,8 +8,6 @@ if TYPE_CHECKING:
 
 from transformers.modeling_utils import unwrap_model
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
-
-from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
 
 from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
 

@@ -73,10 +73,17 @@ class Steering:
 			elif 'emotions_' in dataset_name:
 				emotion = dataset_name.split('_')[1]
 				data = get_single_emotion_dataset(data_dir, emotion, mode=mode)
+			elif dataset_name == 'large_scale_concept':
+				data = large_scale_concept_dataset(data_dir, mode=mode)
+				# extend data with different prompts
+				data.update(large_scale_concept_dataset(data_dir, mode=mode, consider_prompt=False))
+				# also include refusal
+				data.update(get_refusal_pairs(data_dir, mode=mode))
 			else:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
 			data = preprocess_steering_data(data)
 			datasets.append(data)
+		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
 
 		self.layer_id = list(range(-11, -30, -1))

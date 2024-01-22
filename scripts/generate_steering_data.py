@@ -8,6 +8,7 @@ from collections import defaultdict
 import jsonlines
 
 from lat.api_utils import call_model_with_retries_batched, batch_prompts
+from lat.utils import criminal_concepts, bad_concepts, neutral_concepts
 
 SAFE_MODELS = ["claude-2", "gpt-4-1106-preview"]
 
@@ -50,6 +51,8 @@ def parse_json_string(text_line, category):
         example = ast.literal_eval(string_json)
 
         # Check if the category matches
+        if isinstance(example, tuple):
+            example = example[0]
         if example["concept"] == category:
             return example["sentence"]
     except SyntaxError or ValueError:
@@ -182,27 +185,8 @@ def main():
     file_path = 'datasets/refusal/example_concepts.jsonl'
 
     documents = load_documents(file_path)
-    
-    categories = [
-    "evil", "criminal", "bratty", "sleazy", "nasty", "cold and calculating", "scheming", "disgusting", "amoral", 
-    "exploitative", "mean", "know-it-all", "deceitful", "manipulative", "ruthless", "vindictive", "callous", 
-    "unscrupulous", "malicious", "greedy", "heartless", "cruel", "vengeful", "selfish", "unethical", "treacherous", 
-    "violent", "sadistic", "merciless", "cunning", "opportunistic", "tyrannical", "envious", "corrupt", "untrustworthy",
-    "arrogant", "bullying", "cynical", "deceptive", "egotistical", "fraudulent", "harsh", "insidious", "jealous", 
-    "malevolent", "narcissistic", "obnoxious", "pessimistic", "quarrelsome", "rebellious", "spiteful", "troublesome",
-    "unreliable", "vain", "wicked", "xenophobic", "yelling", "zealous", "abrasive", "belligerent", "coercive", 
-    "despotic", "egotistic", "fierce", "grudging", "impatient", "jaded", "loathsome", "malignant", "nefarious",
-    "oppressive", "pernicious", "resentful", "severe", "tyrannous", "unforgiving", "vicious", "wrathful", "argumentative",
-    "boastful", "contemptuous", "distrustful", "erratic", "fickle", "grumpy", "hypocritical", "inflexible", "judgmental",
-    "lethargic", "moody", "nonchalant", "overbearing", "provocative", "rigid", "stubborn", "tactless", "unapologetic",
-    "volatile", "willful", "adamant", "bitter", "crass", "disdainful", "explosive", "flippant", "heedless", "ignorant", 
-    "imprudent", "knavish", "loquacious", "mischievous", "neglectful", "obstinate", "petty", "rash", "sullen", "tumultuous",
-    "unyielding", "verbose", "whimsical", "acerbic", "blunt", "combative", "derisive", "excessive", "fanatical", "hasty",
-    "imperious", "impulsive", "kleptomaniac", "languid", "morose", "noxious", "ostentatious", "pedantic", "reproachful", 
-    "sarcastic", "tempestuous", "unpredictable", "venomous", "wily", "antagonistic", "bellicose", "condescending", 
-    "duplicitous", "elitist", "frenetic", "haughty", "indolent", "insolent", "licentious", "misanthropic", "neurotic", 
-    "overcritical", "pompous", "reticent", "sanctimonious", "thrifty", "underhanded", "vulgar", "wary"
-    ]
+
+    categories = criminal_concepts + bad_concepts + neutral_concepts
     generated_questions = load_generated_questions(categories, args.model)
 
     for c in categories:
