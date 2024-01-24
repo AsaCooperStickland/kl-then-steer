@@ -39,7 +39,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     block_name = "decoder_block"
 
     # Define parameters for generation
-    max_new_tokens = 400
+    max_new_tokens = 800
     batch_size = 8
     all_results = []
 
@@ -170,6 +170,7 @@ def main():
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--steering_coeff', type=float, default=None)
+    parser.add_argument('--buffer_size', type=int, default=0)
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -188,6 +189,7 @@ def main():
         'steering_dataset': cmd_args.steering_dataset,
         'test_setting': cmd_args.test_setting,
         'samples_dir': cmd_args.samples_dir,
+        'buffer_size': cmd_args.buffer_size,
         'samples_freq': cmd_args.samples_freq,
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,

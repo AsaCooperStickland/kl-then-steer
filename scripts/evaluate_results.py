@@ -162,7 +162,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 def main():
     overwrite = True
     path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_no_steer_full/checkpoint-1000", "run_2/checkpoint-1000"] #, "llama-2-7b-chat"]
+    models = ["run_no_steer_full/checkpoint-1000", "run_2/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
     paths = [path + model for model in models]
     for path in paths:
         directory = f"{path}/vanilla_steering"

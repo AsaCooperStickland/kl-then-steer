@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
+    parser.add_argument('--buffer_size', type=int, default=0)
     parser.add_argument('--steering_coeff', type=float, default=None)
     parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
@@ -41,6 +42,7 @@ def main():
         'do_steer': cmd_args.do_steer,
         'samples_dir': cmd_args.samples_dir,
         'samples_freq': cmd_args.samples_freq,
+        'buffer_size': cmd_args.buffer_size,
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,
         'subsample_steering_data': False,
