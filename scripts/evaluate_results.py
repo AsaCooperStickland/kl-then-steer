@@ -162,20 +162,26 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 def main():
     overwrite = True
     path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_no_steer_full/checkpoint-1000", "run_2/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
+    models = ["run_no_steer_full/checkpoint-1000", "run_persuasion0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
+    models += ["run_no_steer_full/checkpoint-4000", "run_persuasion0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"] #, "llama-2-7b-chat"]
     paths = [path + model for model in models]
     for path in paths:
         directory = f"{path}/vanilla_steering"
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
         jail_breaks = [""] # , "_4chan", "_aligned", "_confidant", "_machiavelli"]
-        jail_breaks = ["", "_4chan", "_aligned", "_confidant"]
+        # jail_breaks = ["", "_4chan", "_aligned", "_confidant"]
         # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
         question_types = ["refusal"]
         all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
         # question_types = ["vanilla_"]
         for i, results_type in enumerate(all_question_types):
-            results = json.load(
-                open(f"{directory}/{results_type}_results.json", "r"))
+            results_location = f"{directory}/{results_type}_results.json"
+            if os.path.exists(results_location):
+                results = json.load(
+                    open(f"{directory}/{results_type}_results.json", "r"))
+            else:
+                print(f"Results for {results_type} from model {results_location} not found.")
+                continue
             with open("lat/evaluation_prompt.txt", "r") as f:
                 classifier_prompt = f.read()
             model_name = "gpt-3.5-turbo-16k-0613"

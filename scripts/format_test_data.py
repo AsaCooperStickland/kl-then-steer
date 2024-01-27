@@ -1,120 +1,127 @@
-import jsonlines
 import json
+import jsonlines
 import random
-import os
 import glob
+import os
 
 from lat.utils import jailbreaks_path
+random.seed(27)
 
 
-def read_rephrased_questions(model, category, extra_diverse=False, test_set=False):
-    extra = "_test" if test_set else ""
-    extra += "_extra_diverse" if extra_diverse else ""
-    path = f"datasets/refusal/{model}_{category}_rephrased_questions{extra}.jsonl"
-    if not os.path.exists(path):
-        return []
-    questions = []
-    with jsonlines.open(path, mode='r') as reader:
-        for item in reader:
-            questions.append(item)
-    return questions
+class QuestionReader:
+    def __init__(self, base_path):
+        self.base_path = base_path
 
-    
-def load_jinja_files(directory):
-    # Find all .jinja files in the specified directory
-    file_paths = glob.glob(f"{directory}/*.jinja")
-    
-    file_contents = []
+    def read_initial_questions(self, file_name):
+        path = os.path.join(self.base_path, file_name)
+        with jsonlines.open(path, mode='r') as reader:
+            return [item for item in reader]
 
-    for file_path in file_paths:
-        # Read the contents of the file
-        with open(file_path, 'r') as file:
-            content = file.read()
-            # append to the filename and content
-            file_contents.append((os.path.basename(file_path), content))
-            # Replace the placeholder with the actual prompt
-            # content_with_prompt = content.replace("{prompt}", prompt)
-    return file_contents
+    def read_rephrased_questions(self, model, category, extra_diverse=False, test_set=False):
+        extra = "_test" if test_set else ""
+        extra += "_extra_diverse" if extra_diverse else ""
+        path = os.path.join(self.base_path, f"refusal/{model}_{category}_rephrased_questions{extra}.jsonl")
+        if not os.path.exists(path):
+            return []
+        with jsonlines.open(path, mode='r') as reader:
+            return [item for item in reader]
 
 
-def jinja_format(jinja_files, questions, category, model, extra_diverse=False):
-    # randomly assign each question to a jinja file, ensuring each one has an equal amount
-    # of questions
-    jinja_questions = []
-    random.shuffle(questions)
-    question_interval = len(questions) // len(jinja_files)
-    for i, jinja_info in enumerate(jinja_files):
-        start_index = i * question_interval
-        end_index = start_index + question_interval
-        jinja_name, jinja_prompt = jinja_info
-        category_key = f"{jinja_name}_{category}_{model}" if not extra_diverse else f"{jinja_name}_{category}_{model}_extra_diverse"
-        jinja_questions.extend([{"question": jinja_prompt.replace("{prompt}", item["question"]),
-                                 "category": category_key} for item in questions[start_index:end_index]])
-    return jinja_questions
+class FileLoader:
+    @staticmethod
+    def load_jinja_files(directory):
+        file_paths = glob.glob(f"{directory}/*.jinja")
+        file_contents = []
+        for file_path in file_paths:
+            with open(file_path, 'r') as file:
+                content = file.read()
+                file_contents.append((os.path.basename(file_path), content))
+        return file_contents
 
 
-def jailbreak_format(jailbreaks, questions, category, model, extra_diverse=False):
-    # randomly assign each question to a jailbreak, ensuring each one has an equal amount
-    # of questions
-    jailbreak_questions = []
-    random.shuffle(questions)
-    question_interval = len(questions) // len(jailbreaks)
-    for i, jailbreak in enumerate(jailbreaks):
-        start_index = i * question_interval
-        end_index = start_index + question_interval
-        jailbreak_name = jailbreak["name"]
-        print(f"Generating for {jailbreak_name}")
-        jailbreak_prompt = jailbreak["prompt"]
-        category_key = f"{jailbreak_name}_{category}_{model}" if not extra_diverse else f"{jailbreak_name}_{category}_{model}_extra_diverse"
-        jailbreak_questions.extend([{"question": jailbreak_prompt + item["question"],
-                                 "category": category_key} for item in questions[start_index:end_index]])
-    return jailbreak_questions
-    
+class Formatter:
+    def format_questions(self, templates, questions, category, model, extra_diverse=False):
+        formatted_questions = []
+        mappings = {}
+        random.shuffle(questions)
+        question_interval = len(questions) // len(templates)
+        for i, template_info in enumerate(templates):
+            start_index = i * question_interval
+            end_index = start_index + question_interval
+            template_name, template_prompt = template_info
+            category_key = f"{template_name}_{category}_{model}"
+            category_key += "_extra_diverse" if extra_diverse else ""
+            for item in questions[start_index:end_index]:
+                augmented_question = self.format_example(template_prompt, item["question"])
+                formatted_questions.append({"question": augmented_question, "category": category_key})
+                mappings[augmented_question] = item["question"]
+        return formatted_questions, mappings
 
-def main():
-    initial_questions_file_path = "datasets/refusal/filtered_questions.jsonl"
-    initial_questions = []
-    with jsonlines.open(initial_questions_file_path, mode='r') as reader:
-        for item in reader:
-            initial_questions.append(item)
-    print(f"initial_questions: {len(initial_questions)}")
-    
-    # Load the jinja files
-    directory = "/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/"
-    jinja_files = load_jinja_files(directory)
-    print(f"jinja_files: {len(jinja_files)}")
-    random.shuffle(jinja_files)
-    jinja_files = jinja_files[:5]
-    print(jinja_files)
-    with open(f"{jailbreaks_path}", "r") as f:
-        jailbreaks = json.load(f)
-    augmented_categories = ["illegal_activity", "race_bias", "nationality_bias"]
-    for category in augmented_categories:
-        questions = [item for item in initial_questions if item["category"] == category]
-        augmented_questions = jinja_format(jinja_files, questions, category, "initial")
-        initial_questions.extend(augmented_questions)
-        jailbreak_questions = jailbreak_format(jailbreaks, questions, category, "initial")
-        initial_questions.extend(jailbreak_questions)
 
-    for category in augmented_categories:
-        for model in ["gpt-4", "gpt-3.5-turbo-16k-0613", "mistralai/Mixtral-8x7B-Instruct-v0.1"]:
-            for extra_diverse in [True, False]:
-                questions = read_rephrased_questions(model, category, extra_diverse=extra_diverse, test_set=True)
-                print(f"questions and category {category} for model {model} using extra_diverse {extra_diverse}: {len(questions)}")
-                new_category_key = f"{category}_{model}" if not extra_diverse else f"{category}_{model}_extra_diverse"
-                questions = [{"question": item["question"], "category": new_category_key} for item in questions]
-                initial_questions.extend(questions)
-                jinja_questions = jinja_format(jinja_files, questions, category, model, extra_diverse=extra_diverse)
-                initial_questions.extend(jinja_questions)
-                jailbreak_questions = jailbreak_format(jailbreaks, questions, category, model, extra_diverse=extra_diverse)
-                initial_questions.extend(jailbreak_questions)
-    print(f"initial_questions after augmentation: {len(initial_questions)}")
-    augmented_questions_file_path = "datasets/refusal/augmented_questions.jsonl"
-    with jsonlines.open(augmented_questions_file_path, mode='w') as writer:
-        writer.write_all(initial_questions)
+    def format_example(self, template, question):
+        return template.replace("{prompt}", question)
 
+
+class AdditionFormatter(Formatter):
+    def format_example(self, template, question):
+        return template + question
+
+
+class QuestionAugmenter:
+    def __init__(self, dataset_path, jailbreaks_path, jinja_directory):
+        self.reader = QuestionReader(dataset_path)
+        self.dataset_path = dataset_path
+        self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
+        random.shuffle(self.jinja_files)
+        self.jinja_files = self.jinja_files[:5]
+        print(self.jinja_files)
+        with open(jailbreaks_path, "r") as f:
+            self.jailbreaks = json.load(f)
+        self.jailbreaks = [(item["name"], item["prompt"]) for item in self.jailbreaks]
+        self.jinja_formatter = Formatter()
+        self.addition_formatter = AdditionFormatter()
+        self.mapping = {}
+
+    def augment_questions(self):
+        initial_questions = self.reader.read_initial_questions("refusal/filtered_questions.jsonl")
+        augmented_categories = ["illegal_activity", "race_bias", "nationality_bias"]
+        for category in augmented_categories:
+            questions = [item for item in initial_questions if item["category"] == category]
+            augmented_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, "initial")
+            self.mapping.update(mapping)
+            initial_questions.extend(augmented_questions)
+            jailbreak_questions, mapping = self.addition_formatter.format_questions(self.jailbreaks, questions, category, "initial")
+            self.mapping.update(mapping)
+            initial_questions.extend(jailbreak_questions)
+
+        for category in augmented_categories:
+            for model in ["gpt-4", "gpt-3.5-turbo-16k-0613", "mistralai/Mixtral-8x7B-Instruct-v0.1"]:
+                for extra_diverse in [True, False]:
+                    questions = self.reader.read_rephrased_questions(model, category, extra_diverse=extra_diverse, test_set=True)
+                    print(f"questions and category {category} for model {model} using extra_diverse {extra_diverse}: {len(questions)}")
+                    new_category_key = f"{category}_{model}" if not extra_diverse else f"{category}_{model}_extra_diverse"
+                    questions = [{"question": item["question"], "category": new_category_key} for item in questions]
+                    initial_questions.extend(questions)
+                    jinja_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, model, extra_diverse=extra_diverse)
+                    self.mapping.update(mapping)
+                    initial_questions.extend(jinja_questions)
+                    jailbreak_questions, mapping = self.addition_formatter.format_questions(self.jailbreaks, questions, category, model, extra_diverse=extra_diverse)
+                    self.mapping.update(mapping)
+                    initial_questions.extend(jailbreak_questions)
+
+        # Save the augmented questions
+        augmented_questions_file_path = os.path.join(self.dataset_path, "refusal/augmented_questions.jsonl")
+        with jsonlines.open(augmented_questions_file_path, mode='w') as writer:
+            writer.write_all(initial_questions)
+        self.save_mappings()
+
+    def save_mappings(self):
+        with open(os.path.join(self.dataset_path, "refusal/question_mappings.json"), "w") as file:
+            json.dump(self.mapping, file, indent=4)
 
 
 if __name__ == "__main__":
-    main()
-    
+    augmenter = QuestionAugmenter(dataset_path="datasets", 
+                                  jailbreaks_path=jailbreaks_path,
+                                  jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
+    augmenter.augment_questions()
