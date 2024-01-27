@@ -106,7 +106,10 @@ def run_generation(
         
     questions = []
     
-    file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
+    if custom_args['test_setting'] == "manual_jailbreaks":
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
+    else:
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
     
     # Open the JSONL file and extract questions.
     with jsonlines.open(file_path) as reader:
