@@ -1,9 +1,10 @@
 import json
 import os
 import re
-from openai import BadRequestError
 
 from lat.api_utils import extract_score, call_model_with_retries_batched, batch_prompts
+from lat.format_utils import QuestionAugmenter
+from lat.utils import jailbreaks_path
 
 
 def remove_repeated_letters(input_string):
@@ -104,7 +105,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
     return categorized_data
 
 
-def get_average_scores_json(categorized_data):
+def get_average_scores_json(categorized_data, grouped_categories_dict):
     """Gets the average score per layer per multiplier."""
     average_scores = {}
     for multiplier_key, multiplier_data in categorized_data.items():
@@ -129,15 +130,31 @@ def get_average_scores_json(categorized_data):
                 if len(category_scores) > 0:
                     average_scores[multiplier_key][vec_name][category] = sum(
                             category_scores) / len(category_scores)
+            for category_type in grouped_categories_dict:
+                category_scores = []
+                for category in grouped_categories_dict[category_type]:
+                    if category in average_scores[multiplier_key][vec_name]:
+                        category_scores.append(
+                            average_scores[multiplier_key][vec_name][category])
+                if len(category_scores) > 0:
+                    average_scores[multiplier_key][vec_name][category_type] = sum(
+                        category_scores) / len(category_scores)
     return average_scores
 
 
-def get_csv_from_json_scores(average_scores, question_type="", steering_dataset="refusal_test", print_header=True):
+def get_csv_from_json_scores(average_scores, question_type="", steering_dataset="refusal_test", grouped_categories_dict=None, print_header=True):
     """Gets a CSV from the average scores. Separate out different categories"""
-    category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
-                     "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
+    if grouped_categories_dict:
+        category_list = ["average"] 
+        for category_type in grouped_categories_dict:
+            for multiplier_key, multiplier_data in average_scores.items():
+                for vec_name in ["pca"]:
+                    if category_type in multiplier_data[vec_name]:
+                        category_list.append(category_type)
+    else:
+        category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
+                         "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
     if print_header:
-        # csv = ", , average, , , nationality_bias, , ,race_bias,,,gender_bias,,,political_bias,,,illegal_activity,,,capability,,,human_only,,,power_seeking,,,\n"
         csv = ", , , "
         for category in category_list:
             csv += f"{category},"
@@ -148,6 +165,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
     for multiplier_key, multiplier_data in average_scores.items():
         multiplier_key = multiplier_key.replace("multiplier_", "")
         csv += f"{question_type}, {steering_dataset},{multiplier_key},"
+        # for category in multiplier_data["pca"]:
         for category in category_list:
             for vec_name in ["pca"]:
                 # if "n/a" in multiplier_data:
@@ -165,6 +183,10 @@ def main():
     models = ["run_no_steer_full/checkpoint-1000", "run_persuasion0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
     models += ["run_no_steer_full/checkpoint-4000", "run_persuasion0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"] #, "llama-2-7b-chat"]
     paths = [path + model for model in models]
+    augmenter = QuestionAugmenter(dataset_path="datasets", 
+                                  jailbreaks_path=jailbreaks_path,
+                                  jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
+    grouped_categories_dict = augmenter.get_all_category_keys()
     for path in paths:
         directory = f"{path}/vanilla_steering"
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
@@ -193,12 +215,13 @@ def main():
             else:
                 with open(categorized_results_file, "r") as f:
                     categorized_results = json.load(f)
-            average_scores = get_average_scores_json(categorized_results)
+            average_scores = get_average_scores_json(categorized_results, grouped_categories_dict)
             jail_break_type = results_type.split("_")[-1]
             question_type = "_".join(results_type.split("_")[:-1])
             # print(average_scores, "average scores")
             csv_scores = get_csv_from_json_scores(
-                average_scores, question_type=question_type, steering_dataset=jail_break_type, print_header=i == 0)
+                average_scores, question_type=question_type, steering_dataset=jail_break_type, 
+                grouped_categories_dict=grouped_categories_dict, print_header=i == 0)
             print(f"Results for {results_type} from model {path}:")
             print(csv_scores)
 
