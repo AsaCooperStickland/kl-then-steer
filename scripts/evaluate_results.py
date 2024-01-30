@@ -83,6 +83,9 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
                 classification_output = "{'score': 1}"
             # print(f"{classification_output}\n\nthis is the classification_output")
             score = extract_score(classification_output)
+            # if score == 4:
+            #     print(ans["answer"])
+            #     print(classification_output)
             if score is None:
                 score = -1
             # print(f"{score}\n\nthis is the score")
@@ -180,8 +183,8 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 def main():
     overwrite = True
     path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_no_steer_full/checkpoint-1000", "run_persuasion0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
-    models += ["run_no_steer_full/checkpoint-4000", "run_persuasion0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"] #, "llama-2-7b-chat"]
+    models = ["run_no_steer_full/checkpoint-1000", "run_persuasion_0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
+    models += ["run_no_steer_full/checkpoint-4000", "run_persuasion_0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000", "llama-2-7b-chat"]
     paths = [path + model for model in models]
     augmenter = QuestionAugmenter(dataset_path="datasets", 
                                   jailbreaks_path=jailbreaks_path,
@@ -206,7 +209,7 @@ def main():
                 continue
             with open("lat/evaluation_prompt.txt", "r") as f:
                 classifier_prompt = f.read()
-            model_name = "gpt-3.5-turbo-16k-0613"
+            model_name = "gpt-4-0125-preview" #"gpt-3.5-turbo-16k-0613"
             call_type = "sample"  # or "logprobs"
             categorized_results_file = f"{directory}/{results_type}_categorized_results.json"
             if overwrite or not os.path.exists(categorized_results_file):

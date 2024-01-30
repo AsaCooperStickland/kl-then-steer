@@ -8,6 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Optional, List
+from copy import deepcopy
 
 from transformers import Seq2SeqTrainingArguments
 from llmtuner.model import load_model_and_tokenizer, get_train_args
@@ -39,7 +40,17 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     block_name = "decoder_block"
 
     # Define parameters for generation
-    max_new_tokens = 800
+    results_file = f"{custom_args['results_path']}/{custom_args['steering_dataset']}_{question_type}results.json"
+    if custom_args["overwrite_results"]:
+        existing_results = {}
+    else:
+        if os.path.exists(results_file):
+            with open(results_file, "r") as jfile:
+                existing_results = json.load(jfile)
+                existing_results = {item["multiplier"]: item["answers"] for item in existing_results}
+        else:
+            existing_results = {}
+    max_new_tokens = 1200
     batch_size = 8
     all_results = []
 
@@ -55,13 +66,20 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             activations[key] = activations[key].to(torch.bfloat16)
         trainer.steering.wrapped_model.set_controller(layer_ids, activations, block_name)
         trainer.steering.wrapped_model.to(torch.bfloat16)
+        if multiplier in existing_results:
+            answers = existing_results[multiplier]
+            # filter question is for existing answers
+            existing_questions = set([a["question"] for a in answers])
+            new_questions = [q for q in questions if q["question"] not in existing_questions]
+        else:
+            new_questions = deepcopy(questions)
 
         # Batch processing of questions
-        for i in tqdm(range(0, len(questions), batch_size)):
+        for i in tqdm(range(0, len(new_questions), batch_size)):
             batched_questions = [q["question"]
-                                 for q in questions[i: min(i + batch_size, len(questions))]]
+                                 for q in new_questions[i: min(i + batch_size, len(new_questions))]]
             batched_categories = [q["category"]
-                                  for q in questions[i: min(i + batch_size, len(questions))]]
+                                  for q in new_questions[i: min(i + batch_size, len(new_questions))]]
 
             # Generate texts
 
@@ -87,7 +105,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         all_results.append({"multiplier": multiplier, "answers": answers})
 
     # Save results
-    with open(f"{custom_args['results_path']}/{custom_args['steering_dataset']}_{question_type}results.json", "w") as jfile:
+    with open(results_file, "w") as jfile:
         json.dump(all_results, jfile)
 
 
@@ -156,6 +174,7 @@ def main():
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
     parser.add_argument('--flash_attn', action='store_true')
+    parser.add_argument('--overwrite_results', action='store_true')
     parser.add_argument('--finetuning_type', default='full',
                         choices=['full', 'lora'])
     parser.add_argument('--model_name_or_path',
@@ -198,6 +217,7 @@ def main():
         'mix_with_clean_data': False,
         'subsample_steering_data': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
+        "overwrite_results": cmd_args.overwrite_results,
     }
 
     input_args = {
