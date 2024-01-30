@@ -93,14 +93,17 @@ class QuestionAugmenter:
         self.augmented_categories = ["illegal_activity", "race_bias", "nationality_bias"]
     
     def get_all_category_keys(self):
+        print(f"initial_questions before augmentation: {len(self.initial_questions)}")
         category_key_store = defaultdict(list)
         vanilla_categories = list(set([item["category"] for item in self.initial_questions]))
         category_key_store["vanilla_categories"] = vanilla_categories
         for category in self.augmented_categories:
             vanilla_jinja_keys = self.jinja_formatter.get_category_keys(self.jinja_files, category, "initial")
             category_key_store["vanilla_jinja_categories"].extend(vanilla_jinja_keys)
+            category_key_store["all_jinja_categories"].extend(vanilla_jinja_keys)
             vanilla_jailbreak_keys = self.addition_formatter.get_category_keys(self.jailbreaks, category, "initial")
             category_key_store["vanilla_jailbreak_categories"].extend(vanilla_jailbreak_keys)
+            category_key_store["all_jailbreak_categories"].extend(vanilla_jailbreak_keys)
         all_rephrased_category_keys = []
         model_rephrased_category_keys = defaultdict(list)
         for category in self.augmented_categories:
@@ -112,9 +115,11 @@ class QuestionAugmenter:
                     jinja_category_keys = self.jinja_formatter.get_category_keys(self.jinja_files, category, model, extra_diverse=extra_diverse)
                     category_type = f"{model}_jinja" if not extra_diverse else f"{model}_extra_diverse_jinja"
                     category_key_store[category_type].extend(jinja_category_keys)
+                    category_key_store["all_jinja_categories"].extend(jinja_category_keys)
                     jailbreak_category_keys = self.addition_formatter.get_category_keys(self.jailbreaks, category, model, extra_diverse=extra_diverse)
                     category_type = f"{model}_jailbreak" if not extra_diverse else f"{model}_extra_diverse_jailbreak"
                     category_key_store[category_type].extend(jailbreak_category_keys)
+                    category_key_store["all_jailbreak_categories"].extend(jailbreak_category_keys)
         category_key_store["all_rephrased_categories"] = all_rephrased_category_keys
         for model, category_keys in model_rephrased_category_keys.items():
             category_key_store[f"{model}_rephrased_categories"] = category_keys
@@ -147,6 +152,7 @@ class QuestionAugmenter:
                     self.initial_questions.extend(jailbreak_questions)
 
         # Save the augmented questions
+        print(f"initial_questions after augmentation: {len(self.initial_questions)}")
         augmented_questions_file_path = os.path.join(self.dataset_path, "refusal/augmented_questions.jsonl")
         with jsonlines.open(augmented_questions_file_path, mode='w') as writer:
             writer.write_all(self.initial_questions)
