@@ -40,7 +40,7 @@ class FileLoader:
 
 
 class Formatter:
-    def format_questions(self, templates, questions, category, model, extra_diverse=False):
+    def format_questions(self, templates, questions, category, model, extra_diverse=False, augment_all=True):
         formatted_questions = []
         mappings = {}
         random.shuffle(questions)
@@ -48,6 +48,9 @@ class Formatter:
         for i, template_info in enumerate(templates):
             start_index = i * question_interval
             end_index = start_index + question_interval
+            if augment_all:
+                start_index = 0
+                end_index = len(questions)
             template_name, template_prompt = template_info
             category_key = f"{template_name}_{category}_{model}"
             category_key += "_extra_diverse" if extra_diverse else ""
@@ -90,7 +93,11 @@ class QuestionAugmenter:
         self.addition_formatter = AdditionFormatter()
         self.mapping = {}
         self.initial_questions = self.reader.read_initial_questions("refusal/filtered_questions.jsonl")
-        self.augmented_categories = ["illegal_activity", "race_bias", "nationality_bias"]
+        misc_questions_file = "refusal/misc.txt"
+        with open(os.path.join(dataset_path, misc_questions_file), "r") as file:
+            misc_questions = [line.strip() for line in file]
+            self.initial_questions.extend([{"question": item, "category": "misc"} for item in misc_questions])
+        self.augmented_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
     
     def get_all_category_keys(self):
         print(f"initial_questions before augmentation: {len(self.initial_questions)}")
@@ -144,10 +151,12 @@ class QuestionAugmenter:
                     new_category_key = f"{category}_{model}" if not extra_diverse else f"{category}_{model}_extra_diverse"
                     questions = [{"question": item["question"], "category": new_category_key} for item in questions]
                     self.initial_questions.extend(questions)
-                    jinja_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, model, extra_diverse=extra_diverse)
+                    jinja_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, 
+                                                                                     model, extra_diverse=extra_diverse, augment_all=False)
                     self.mapping.update(mapping)
                     self.initial_questions.extend(jinja_questions)
-                    jailbreak_questions, mapping = self.addition_formatter.format_questions(self.jailbreaks, questions, category, model, extra_diverse=extra_diverse)
+                    jailbreak_questions, mapping = self.addition_formatter.format_questions(self.jailbreaks, questions, category, 
+                                                                                            model, extra_diverse=extra_diverse, augment_all=False)
                     self.mapping.update(mapping)
                     self.initial_questions.extend(jailbreak_questions)
 
