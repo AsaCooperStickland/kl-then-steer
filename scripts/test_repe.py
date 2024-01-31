@@ -201,9 +201,11 @@ def main():
     # set wandb off for now
     # os.environ["WANDB_DISABLED"] = "true"
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
-    
-    name_to_path = {'/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf' : f'{cmd_args.output_dir}/llama-2-7b-chat',
-                    'meta-llama/Llama-2-7b-chat-hf' : f'{cmd_args.output_dir}/llama-2-7b-chat',}
+    model_sizes = ["7", "13"]
+    name_to_path = {}
+    for size in model_sizes:
+        name_to_path[f'/vast/work/public/ml-datasets/llama-2/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
+        name_to_path[f'meta-llama/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
                     
     custom_args = {
         "base_directory": cmd_args.base_directory,
