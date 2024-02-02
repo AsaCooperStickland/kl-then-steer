@@ -1,6 +1,7 @@
 **/results/
 **/obsolete/
 **/wandb/
+cache.pkl
 
 .vscode/
 finetuning/helper_for_samples.py

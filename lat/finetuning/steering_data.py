@@ -4,8 +4,9 @@ import random
 import os
 
 
-def primary_emotions_concept_dataset(data_dir, mode):
-	emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
+def primary_emotions_concept_dataset(data_dir, mode, emotions=None):
+	if emotions is None:
+		emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
 	raw_data = {}
 	for emotion in emotions:
 		with open(os.path.join(data_dir, 'repe', 'emotions', f'{emotion}.json')) as file:
@@ -30,14 +31,16 @@ def get_happiness_dataset(data_dir, mode):
 	formatted_data = primary_emotions_concept_dataset(data_dir, mode)
 	return {'happiness': formatted_data['happiness']}
 
-def get_refusal_pairs(data_dir, mode="train"):
-	assert mode in ["train", "test"]
+def get_refusal_pairs(data_dir, mode="train", path=None):
+	assert mode in ["train", "test", "all"]
 
-	with open(os.path.join(data_dir, "refusal/refusal_data_A_B.json")) as file:
+	# if path is None:
+	# 	path = os.path.join(data_dir, "refusal/refusal_data_A_B.json")
+	with open(path) as file:
 		raw_data = json.load(file)
 	if mode == "train":
 		raw_data = raw_data[:int(0.8 * len(raw_data))]
-	else:
+	if mode == 'test':
 		raw_data = raw_data[int(0.8 * len(raw_data)):]
 
 	c_e, o_e = [], []
@@ -52,4 +55,25 @@ def get_refusal_pairs(data_dir, mode="train"):
 	
 	pairs = list(zip(*[c_e, o_e]))
 	data = {"refusal": pairs}
+	return data
+
+def get_prompt_pairs(data_dir, mode="train", path=None):
+	assert mode in ["train", "test", "all"]
+
+	with open(path) as file:
+		raw_data = json.load(file)
+	if mode == "train":
+		raw_data = raw_data[:int(0.8 * len(raw_data))]
+	if mode == 'test':
+		raw_data = raw_data[int(0.8 * len(raw_data)):]
+
+	c_e, o_e = [], []
+	for item in raw_data:
+		neg_example = (item["bad_prompt"], '')
+		pos_example = (item['good_prompt'], '')
+		c_e.append(neg_example)
+		o_e.append(pos_example)
+	
+	pairs = list(zip(*[c_e, o_e]))
+	data = {"default_category": pairs}
 	return data

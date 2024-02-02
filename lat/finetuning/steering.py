@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
 
-from steering_data import *
+from lat.finetuning.steering_data import *
 
 from repe import repe_pipeline_registry
 repe_pipeline_registry()
@@ -65,13 +65,22 @@ class Steering:
 		self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer, device='cuda')
 
 		datasets = []
-		for mode in ['train', 'test']:
-			if dataset_name == 'emotions':
-				data = primary_emotions_concept_dataset(data_dir, mode=mode)
-			elif dataset_name == 'refusal':
-				data = get_refusal_pairs(data_dir, mode=mode)
-			elif dataset_name == 'happiness':
-				data = get_happiness_dataset(data_dir, mode=mode)
+		for mode in ['all', 'test']:
+			# if dataset_name == 'emotions':
+			# 	data = primary_emotions_concept_dataset(data_dir, mode=mode)
+			# elif dataset_name == 'refusal':
+			# 	data = get_refusal_pairs(data_dir, mode=mode)
+			if dataset_name == 'happiness_cropped':
+				data = primary_emotions_concept_dataset(data_dir, mode=mode, emotions=['happiness_cropped',])
+				print(data)
+			elif dataset_name == 'refusal_data_A_B_cropped':
+				data = get_refusal_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/refusal_data_A_B_cropped.json")
+			elif dataset_name == 'refusal_data_full_answers':
+				data = get_refusal_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/refusal_data_full_answers.json")
+			elif dataset_name == 'refusal_data_A_B_question_pairs':
+				data = get_prompt_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/refusal_data_A_B_question_pairs.json")
+			elif dataset_name == 'filtered_questions_style_question_pairs':
+				data = get_prompt_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/filtered_questions_style_question_pairs.json")
 			data = preprocess_steering_data(data)
 			datasets.append(data)
 		self.train_data, self.val_data = datasets
@@ -141,8 +150,9 @@ class Steering:
 
 		return activations
 	
-	def do_shift(self, mode):
-		coeff = self.sample_coeff()
+	def do_shift(self, mode, coeff=None):
+		if coeff is None:
+			coeff = self.sample_coeff()
 		activations = self.get_shift(coeff=coeff, layer_id=self.layer_id, num_pairs=40, mode=mode)
 		self.wrapped_model.reset()
 		for key in activations:

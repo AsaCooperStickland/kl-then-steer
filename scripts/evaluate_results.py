@@ -1,6 +1,7 @@
 import json
 import re
 from openai import BadRequestError
+import argparse
 
 from lat.api_utils import get_content, extract_score, call_model_with_retries_batched, batch_prompts
 
@@ -28,7 +29,7 @@ def remove_repeated_letters(input_string):
         return False, input_string
     
 
-def categorize_results(results, classifier_prompt, model_name, call_type, directory, question_type):
+def categorize_results(results, classifier_prompt, model_name, call_type, directory, save_filename_prefix):
     """Categorizes the results using the classifier and stores them as JSON."""
     categorized_data = {}
 
@@ -39,7 +40,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
                 "question": ans["question"], "answer": ans["answer"]}
             classification_input = f"\nInput: {input_prompt}"
             prompt = classifier_prompt + classification_input
-            prompt = f"{prompt}\nLet's think step by step:"
+            # prompt = f"{prompt}\nLet's think step by step:"
             all_prompts.append(prompt)
 
     # Send prompts in batches and get responses
@@ -48,7 +49,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
         include, prompt = remove_repeated_letters(prompt)
         cleaned_prompts.append(prompt)
             
-    batch_size = 1
+    batch_size = 128
     batched_prompts_gen = batch_prompts(cleaned_prompts, batch_size)
     all_responses = call_model_with_retries_batched(
         batched_prompts_gen, model_name, call_type)
@@ -87,9 +88,9 @@ def categorize_results(results, classifier_prompt, model_name, call_type, direct
             }
             categorized_data[multiplier_key].append(entry)
 
-    # Store the data
-    with open(f"{directory}/{question_type}categorized_results.json", "w") as file:
-        json.dump(categorized_data, file)
+        # Store the data
+        with open(f"{directory}/{save_filename_prefix}_eval_results.json", "w") as file:
+            json.dump(categorized_data, file)
 
     return categorized_data
 
@@ -150,34 +151,56 @@ def get_csv_from_json_scores(average_scores, print_header=True):
 
 
 def main():
-    evaluate = False
-    path = "/scratch/alc9734/latent-adversarial-training/results/"
-    models = ["run_2/checkpoint-9000", "llama-2-7b-chat"]
+    # Create parser object
+    parser = argparse.ArgumentParser(description="Get the 'exp' parameter from command line.")
+
+    # Add 'exp' argument
+    # You can modify `type` based on the expected type (int, float, etc.)
+    # `required=True` makes the argument mandatory
+    parser.add_argument('--exp', type=str, required=True, help="An example parameter.")
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    evaluate = True
+
+    # path = "/scratch/alc9734/latent-adversarial-training/results/"
+    # path = "/scratch/al6759/assets_lat/tmp/"
+    path = "/scratch/al6759/lat/results/"
+
+    # models = ["run_2/checkpoint-9000", "llama-2-7b-chat"]
+    models = ["llama-2-7b-chat",]
+    
     paths = [path + model for model in models]
     for path in paths:
-        directory = f"{path}/vanilla_steering"
+        # directory = f"{path}/vanilla_steering"
+        directory = path
         # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
-        question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
-        # question_types = ["vanilla_"]
-        for i, question_type in enumerate(question_types):
-            results = json.load(
-                open(f"{directory}/{question_type}results.json", "r"))
-            with open("lat/evaluation_prompt.txt", "r") as f:
-                classifier_prompt = f.read()
-            model_name = "gpt-3.5-turbo-16k-0613"
-            call_type = "sample"  # or "logprobs"
-            if evaluate:
-                categorized_results = categorize_results(
-                    results, classifier_prompt, model_name, call_type, directory, question_type)
-            else:
-                with open(f"{directory}/{question_type}categorized_results.json", "r") as f:
-                    categorized_results = json.load(f)
-            average_scores = get_average_scores_json(categorized_results)
-            # print(average_scores, "average scores")
-            csv_scores = get_csv_from_json_scores(
-                average_scores, print_header=i == 0)
-            print(f"Results for {question_type} from model {path}:")
-            print(csv_scores)
+        # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
+        # question_types = ["vanilla_"]  # I got these with refusal
+        # for i, question_type in enumerate(question_types):
+        # exp = 'refusal_data_A_B_cropped'
+        filename = args.exp + '_gen_results'
+        results = json.load(
+            # open(f"{directory}/{question_type}results.json", "r"))
+            open(f"{directory}/{filename}.json", "r"))
+        with open("lat/evaluation_prompt.txt", "r") as f:
+            classifier_prompt = f.read()
+        # model_name = "gpt-3.5-turbo-0125"
+        model_name = "gpt-3.5-turbo-1106"  # higher rate limit
+        call_type = "sample"  # or "logprobs"
+        if evaluate:
+            categorized_results = categorize_results(
+                results, classifier_prompt, model_name, call_type, directory, filename)
+        else:
+            with open(f"{directory}/{args.exp}_eval_results.json", "r") as f:
+                categorized_results = json.load(f)
+        average_scores = get_average_scores_json(categorized_results)
+        # print(average_scores, "average scores")
+        csv_scores = get_csv_from_json_scores(
+            average_scores, print_header=True)
+        print(f"Results for {filename} from model {path}:")
+        print(csv_scores)
 
 
 if __name__ == "__main__":
