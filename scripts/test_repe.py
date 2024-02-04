@@ -14,6 +14,7 @@ from transformers import Seq2SeqTrainingArguments
 from llmtuner.model import load_model_and_tokenizer, get_train_args
 from llmtuner.extras.callbacks import LogCallback
 from lat.utils import system_prompt, data_path, jailbreaks_path
+from lat.format_utils import prompt_format
 from lat.finetuning.trainer import SteeringTrainer
 from lat.finetuning.steering import Steering
 
@@ -24,14 +25,6 @@ if TYPE_CHECKING:
 
 load_dotenv()
 token = os.getenv("HF_TOKEN")
-
-
-def prompt_format(instruction):
-    B_INST, E_INST = "[INST]", "[/INST]"
-    B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
-    dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
-    return dialog_content
 
 
 def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, question_type="", temperature=0.0):
