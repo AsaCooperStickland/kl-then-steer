@@ -5,7 +5,17 @@ import glob
 import os
 from collections import defaultdict
 
+from lat.utils import system_prompt
+
 random.seed(27)
+
+
+def prompt_format(instruction):
+    B_INST, E_INST = "[INST]", "[/INST]"
+    B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
+    dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
+    dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+    return dialog_content
 
 
 class QuestionReader:

@@ -1,7 +1,7 @@
 from collections import defaultdict
-import pickle
 import concurrent.futures
 import math
+import json
 import time
 import re
 import asyncio
@@ -85,10 +85,10 @@ def extract_score(classification_str):
 
 do_cache = True
 if do_cache:
-    # load pickled cache if it exists
-    if os.path.exists('cache.pkl'):
-        with open('cache.pkl', 'rb') as f:
-            CACHE = pickle.load(f)
+    # load cache if it exists
+    if os.path.exists('cache.json'):
+        with open('cache.json', 'r') as f:
+            CACHE = json.load(f)
     else:
         # Global cache for model responses
         CACHE = defaultdict(dict)
@@ -106,14 +106,30 @@ def batch_prompts(prompts, batch_size=5):
 def call_model_with_retries_batched(batched_prompts, model_name, call_type, temperature=0.0):
     """Calls the model with retries for batched prompts and caches the results."""
     responses = []
+
+    def format_key(model_name, prompt):
+        return f"MODEL_NAME: {model_name} PROMPT: {prompt}"
+    
+    def model_response_to_json(model_response):
+        return {
+            "model_name": model_response.model_name,
+            "content": model_response.content,
+            "stop_reason": model_response.stop_reason,
+        }
+    
+    def json_to_model_response(json_response):
+        return ModelResponse(
+            model_name=json_response["model_name"],
+            content=json_response["content"],
+            stop_reason=json_response["stop_reason"],
+        )
+    
     for prompts in tqdm(batched_prompts):
         # Check cache first
-        cached_responses = [CACHE[(model_name, prompt)]
-                            for prompt in prompts if (model_name, prompt) in CACHE]
-        cached_prompts = [prompt for prompt in prompts if (
-            model_name, prompt) in CACHE]
-        uncached_prompts = [prompt for prompt in prompts if (
-            model_name, prompt) not in CACHE]
+        cached_responses = [json_to_model_response(CACHE[format_key(model_name, prompt)])
+                            for prompt in prompts if format_key(model_name, prompt) in CACHE]
+        cached_prompts = [prompt for prompt in prompts if format_key(model_name, prompt) in CACHE]
+        uncached_prompts = [prompt for prompt in prompts if format_key(model_name, prompt) not in CACHE]
 
         if uncached_prompts:
             model_responses = call_model_with_retries(
@@ -125,18 +141,18 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
             
             for prompt, response in zip(uncached_prompts, model_responses):
                 response = get_generic_response(response, model_name)
-                CACHE[(model_name, prompt)] = response
+                CACHE[format_key(model_name, prompt)] = model_response_to_json(response)
                 responses.append(response)
             # save cache
             if do_cache:
-                with open('cache.pkl', 'wb') as f:
-                    pickle.dump(CACHE, f)
+                with open('cache.json', 'w') as f:
+                    json.dump(CACHE, f)
                 
         for cached_prompt, cached_response in zip(cached_prompts, cached_responses):
             if not isinstance(cached_response, ModelResponse):
                 cached_response = get_generic_response(
                     cached_response, model_name)
-                CACHE[(model_name, cached_prompt)] = cached_response
+                CACHE[format_key(model_name, cached_prompt)] = cached_response
             responses.append(cached_response)
         # responses.extend(cached_responses)
 
