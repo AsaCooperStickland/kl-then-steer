@@ -62,7 +62,6 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
                 "question": ans["question"], "answer": ans["answer"]}
             classification_input = f"\nInput: {input_prompt}"
             prompt = classifier_prompt + classification_input
-            prompt = f"{prompt}\nLet's think step by step:"
             prompt = remove_repeated_letters(prompt)[1]
             entry = {
                 "question": ans["question"],
@@ -75,7 +74,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
 
     print(f"Evaluating {sum(len(v) for v in all_prompts.values())} prompts.")
             
-    batch_size = 1
+    batch_size = 128
     multiplier_keys_sorted = sorted(all_prompts.keys())
     all_prompts_only = []
     for multiplier_key in multiplier_keys_sorted:

@@ -17,7 +17,8 @@ from openai import OpenAI, BadRequestError
 
 
 MAX_NUM_RETRIES = 5
-CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview']
+CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview',
+               'gpt-3.5-turbo', 'gpt-3.5-turbo-0125', 'gpt-3.5-turbo-1106']
 OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001',
                  'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
 ANTHROPIC_MODELS = ['claude-2']
@@ -30,7 +31,8 @@ openai_key = os.getenv("OPENAI_API_KEY")
 anyscale_token = os.getenv("ANYSCALE_TOKEN")
 
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-client = OpenAI(api_key=openai_key)
+client = OpenAI(api_key=openai_key,
+                organization='org-4L2GWAH28buzKOIhEAb3L5aq')
 anyscale_client = OpenAI(
            base_url = "https://api.endpoints.anyscale.com/v1",
            api_key=anyscale_token)
