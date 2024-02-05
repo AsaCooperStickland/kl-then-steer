@@ -9,5 +9,8 @@
   },
   "training_0": {
     "file_name": "training_0.json"
+  },
+  "training_persuasion0.50": {
+    "file_name": "training_persuasion0.50.json"
   }
 }

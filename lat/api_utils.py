@@ -1,54 +1,77 @@
-import json
 from collections import defaultdict
-import pickle
 import concurrent.futures
 import math
+import json
 import time
 import re
 import asyncio
 import os
 from collections import namedtuple
 from typing import Dict, List, Tuple, Union
+from dataclasses import dataclass
 from tqdm import tqdm
 from dotenv import load_dotenv
-from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from anthropic import Anthropic
 from openai import OpenAI, BadRequestError
 
 
 MAX_NUM_RETRIES = 5
-CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview',
+CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview',
                'gpt-3.5-turbo', 'gpt-3.5-turbo-0125', 'gpt-3.5-turbo-1106']
 OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001',
                  'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
 ANTHROPIC_MODELS = ['claude-2']
-ANYSCALE_MODELS = ['HuggingFaceH4/zephyr-7b-beta', 'mistralai/Mistral-7B-Instruct-v0.1']
+ANYSCALE_MODELS = ['HuggingFaceH4/zephyr-7b-beta', 'mistralai/Mistral-7B-Instruct-v0.1', 'mistralai/Mixtral-8x7B-Instruct-v0.1']
 Example = namedtuple('Example', [
                      'question', 'choice1', 'choice2', 'choice3', 'choice4', 'correct_index'])
 
 load_dotenv()
 openai_key = os.getenv("OPENAI_API_KEY")
-# anyscale_token = os.getenv("ANYSCALE_TOKEN")
+anyscale_token = os.getenv("ANYSCALE_TOKEN")
 
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 client = OpenAI(api_key=openai_key,
                 organization='org-4L2GWAH28buzKOIhEAb3L5aq')
-# anyscale_client = OpenAI(
-#            base_url = "https://api.endpoints.anyscale.com/v1",
-#            api_key=anyscale_token)
+anyscale_client = OpenAI(
+           base_url = "https://api.endpoints.anyscale.com/v1",
+           api_key=anyscale_token)
 
 
-def get_content(response, model_name):
+@dataclass
+class ModelResponse:
+    model_name: str
+    content: str
+    stop_reason: str
+
+
+def get_generic_response(response, model_name):
     if isinstance(response, BadRequestError):
-        return response
+        model_response = ModelResponse(
+            model_name=model_name,
+            content="",
+            stop_reason="bad_request_error",
+        )
+        return model_response
     if model_name in CHAT_MODELS or model_name in ANYSCALE_MODELS:
         content = response.choices[0].message.content
+        stop_reason = response.choices[0].finish_reason
+        model_response = ModelResponse(
+            model_name=model_name,
+            content=content,
+            stop_reason=stop_reason,
+        )
     elif model_name in ANTHROPIC_MODELS:
         content = response.completion
+        stop_reason = response.stop_reason
+        model_response = ModelResponse(
+            model_name=model_name,
+            content=content,
+            stop_reason=stop_reason,
+        )
     else:
         raise ValueError(f"Model {model_name} not supported.")
-    return content
+    return model_response
 
 
 def extract_score(classification_str):
@@ -62,12 +85,12 @@ def extract_score(classification_str):
     return None  # or return 0 or any default value
 
 
-evaluate = False
-if evaluate:
-    # load pickled cache if it exists
-    if os.path.exists('cache.pkl'):
-        with open('cache.pkl', 'rb') as f:
-            CACHE = pickle.load(f)
+do_cache = True
+if do_cache:
+    # load cache if it exists
+    if os.path.exists('cache.json'):
+        with open('cache.json', 'r') as f:
+            CACHE = json.load(f)
     else:
         # Global cache for model responses
         CACHE = defaultdict(dict)
@@ -85,12 +108,30 @@ def batch_prompts(prompts, batch_size=5):
 def call_model_with_retries_batched(batched_prompts, model_name, call_type, temperature=0.0):
     """Calls the model with retries for batched prompts and caches the results."""
     responses = []
+
+    def format_key(model_name, prompt):
+        return f"MODEL_NAME: {model_name} PROMPT: {prompt}"
+    
+    def model_response_to_json(model_response):
+        return {
+            "model_name": model_response.model_name,
+            "content": model_response.content,
+            "stop_reason": model_response.stop_reason,
+        }
+    
+    def json_to_model_response(json_response):
+        return ModelResponse(
+            model_name=json_response["model_name"],
+            content=json_response["content"],
+            stop_reason=json_response["stop_reason"],
+        )
+    
     for prompts in tqdm(batched_prompts):
         # Check cache first
-        cached_responses = [CACHE[(model_name, prompt)]
-                            for prompt in prompts if (model_name, prompt) in CACHE]
-        uncached_prompts = [prompt for prompt in prompts if (
-            model_name, prompt) not in CACHE]
+        cached_responses = [json_to_model_response(CACHE[format_key(model_name, prompt)])
+                            for prompt in prompts if format_key(model_name, prompt) in CACHE]
+        cached_prompts = [prompt for prompt in prompts if format_key(model_name, prompt) in CACHE]
+        uncached_prompts = [prompt for prompt in prompts if format_key(model_name, prompt) not in CACHE]
 
         if uncached_prompts:
             model_responses = call_model_with_retries(
@@ -99,14 +140,23 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
                 call_type=call_type,
                 temperature=temperature,
             )
+            
             for prompt, response in zip(uncached_prompts, model_responses):
-                CACHE[(model_name, prompt)] = response
+                response = get_generic_response(response, model_name)
+                CACHE[format_key(model_name, prompt)] = model_response_to_json(response)
                 responses.append(response)
             # save cache
-            with open('cache.pkl', 'wb') as f:
-                pickle.dump(CACHE, f)
-
-        responses.extend(cached_responses)
+            if do_cache:
+                with open('cache.json', 'w') as f:
+                    json.dump(CACHE, f)
+                
+        for cached_prompt, cached_response in zip(cached_prompts, cached_responses):
+            if not isinstance(cached_response, ModelResponse):
+                cached_response = get_generic_response(
+                    cached_response, model_name)
+                CACHE[format_key(model_name, cached_prompt)] = cached_response
+            responses.append(cached_response)
+        # responses.extend(cached_responses)
 
     return responses
 
