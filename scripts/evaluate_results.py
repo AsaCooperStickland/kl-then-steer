@@ -226,6 +226,7 @@ def main():
     models += ["run_2/checkpoint-4000", "run_no_steer_full/checkpoint-4000", "run_persuasion_0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"]
     models += ["run_2/checkpoint-16000", "run_no_steer_full/checkpoint-16000", "run_persuasion_0.5/checkpoint-16000", "run_large_scale_concept_1/checkpoint-16000"]
     models += ["llama-2-7b-chat", "llama-2-13b-chat"]
+    models += ["run2_persuasion_0.5"]
     augmenter = QuestionAugmenter(dataset_path="datasets", 
                                   jailbreaks_path=jailbreaks_path,
                                   jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
