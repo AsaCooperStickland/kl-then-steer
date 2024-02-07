@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
 
-from steering_data import *
+from lat.finetuning.steering_data import *
 
 from repe import repe_pipeline_registry
 repe_pipeline_registry()
@@ -63,6 +63,8 @@ class Steering:
 		self.n_difference = 1
 		self.direction_method = 'pca'
 		self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer, device='cuda')
+		if custom_args["buffer_size"] > 0:
+			self.directions_buffer = {}
 
 		datasets = []
 		for mode in ['train', 'test']:
@@ -70,10 +72,22 @@ class Steering:
 				data = primary_emotions_concept_dataset(data_dir, mode=mode)
 			elif dataset_name == 'refusal':
 				data = get_refusal_pairs(data_dir, mode=mode)
-			elif dataset_name == 'happiness':
-				data = get_happiness_dataset(data_dir, mode=mode)
+			elif 'emotions_' in dataset_name:
+				emotion = dataset_name.split('_')[1]
+				data = get_single_emotion_dataset(data_dir, mode=mode, emotion=emotion)
+			elif dataset_name == 'large_scale_concept':
+				data = large_scale_concept_dataset(data_dir, mode=mode)
+				# extend data with quadratic prompts
+				# data.update(large_scale_concept_dataset_quadratic(data_dir, mode=mode, consider_prompt=False))
+				# extend data with different prompts
+				data.update(large_scale_concept_dataset(data_dir, mode=mode, consider_prompt=False))
+				# also include refusal
+				data.update(get_refusal_pairs(data_dir, mode=mode))
+			else:
+				raise ValueError(f"Invalid dataset name: {dataset_name}")
 			data = preprocess_steering_data(data)
 			datasets.append(data)
+		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
 
 		self.layer_id = list(range(-11, -30, -1))
@@ -86,6 +100,8 @@ class Steering:
 	
 	def sample_coeff(self):
 		c = self.custom_args['steering_coeff']
+		# sample a range between -1 and 1
+		c = c * random.uniform(-1, 1)
 		return (c if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else c
 
 	def sample_pairs(self, data, num_pairs):
@@ -137,9 +153,30 @@ class Steering:
 
 		activations = {}
 		for layer in layer_id:
-			activations[layer] = torch.tensor(coeff * rep_reader.directions[layer] * rep_reader.direction_signs[layer]).to(self.model.device).half()
+			if self.custom_args["buffer_size"] > 0:
+				self.store_shift(layer, rep_reader.directions[layer] * rep_reader.direction_signs[layer])
+				activations[layer] = torch.tensor(coeff * self.sample_from_buffer(layer)).to(self.model.device).half()
+			else:
+				activations[layer] = torch.tensor(coeff * rep_reader.directions[layer] * rep_reader.direction_signs[layer]).to(self.model.device).half()
 
 		return activations
+
+	def store_shift(self, layer, new_vector):
+	    # store old shifts in a queue, and replace with a new one
+		if layer not in self.directions_buffer:
+			self.directions_buffer[layer] = []
+		self.directions_buffer[layer].append(new_vector)
+		if len(self.directions_buffer[layer]) > self.custom_args['buffer_size']:
+			self.directions_buffer[layer].pop(0)
+
+	def sample_from_buffer(self, layer):
+		# with 50% probability return the latest vector, otherwise sample from the buffer
+		if random.random() < 0.5:
+			return self.directions_buffer[layer][-1]
+		subsample_size = min(int(len(self.directions_buffer[layer]) / 5), 10)
+		subsampled_vectors = random.sample(self.directions_buffer[layer], subsample_size)
+		# return the average of the subsampled vectors
+		return np.mean(subsampled_vectors, axis=0)
 	
 	def do_shift(self, mode):
 		coeff = self.sample_coeff()

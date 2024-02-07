@@ -2,10 +2,20 @@ from llmtuner.model import get_train_args
 import argparse
 from datetime import datetime
 import os
+import random
+import numpy as np
+import torch
 import sys
 from llmtuner.extras.callbacks import LogCallback
 from workflow import run_sft
 # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
+
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 
 def main():
@@ -21,15 +31,20 @@ def main():
     parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
-    parser.add_argument('--num_train_epochs', type=int, default=3)
-    parser.add_argument('--samples_dir', default='samples')
-    parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
+    parser.add_argument('--num_train_epochs', type=int, default=1)
+    parser.add_argument('--samples_dir', default='/scratch/alc9734/latent-adversarial-training/samples')
+    parser.add_argument('--samples_freq', default=4000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
+    parser.add_argument('--buffer_size', type=int, default=0)
     parser.add_argument('--steering_coeff', type=float, default=None)
+    parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
+    parser.add_argument('--seed', type=int, default=19)
     cmd_args = parser.parse_args()
 
+    set_random_seed(cmd_args.seed)
+    
     os.environ['WANDB_PROJECT'] = 'lat'
     # os.environ["WANDB_DISABLED"] = "true"  # set wandb off for faster debug
     os.environ['WANDB_DIR'] = cmd_args.wandb_dir
@@ -37,8 +52,10 @@ def main():
     custom_args = {
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
+        'do_steer': cmd_args.do_steer,
         'samples_dir': cmd_args.samples_dir,
         'samples_freq': cmd_args.samples_freq,
+        'buffer_size': cmd_args.buffer_size,
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,
         'subsample_steering_data': False,
@@ -62,13 +79,13 @@ def main():
         "gradient_accumulation_steps": 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
-        "save_steps": 1000,
+        "save_steps": 4000,
         "learning_rate": 5e-5,
         "num_train_epochs": cmd_args.num_train_epochs,
         "plot_loss": True,
         "bf16": True,
         "overwrite_output_dir": True,
-        "seed": 15,
+        "seed": cmd_args.seed,
         "flash_attn": cmd_args.flash_attn,
         "val_size": 0.2,
         "do_sample": True,
@@ -91,7 +108,7 @@ def main():
         elif custom_args['model_name_or_path'] == 'meta-llama/Llama-2-13b-chat-hf':
             custom_args['steering_coeff'] = 3.0
         else:
-            raise Exception
+            custom_args['steering_coeff'] = 1.5
     run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
 
 if __name__ == "__main__":
