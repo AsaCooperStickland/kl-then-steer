@@ -95,7 +95,6 @@ class QuestionAugmenter:
         self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
         random.shuffle(self.jinja_files)
         self.jinja_files = self.jinja_files[:5]
-        print(self.jinja_files)
         with open(jailbreaks_path, "r") as f:
             self.jailbreaks = json.load(f)
         self.jailbreaks = [(item["name"], item["prompt"]) for item in self.jailbreaks]
@@ -110,7 +109,6 @@ class QuestionAugmenter:
         self.augmented_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
     
     def get_all_category_keys(self):
-        print(f"initial_questions before augmentation: {len(self.initial_questions)}")
         category_key_store = defaultdict(list)
         vanilla_categories = list(set([item["category"] for item in self.initial_questions]))
         category_key_store["vanilla_categories"] = vanilla_categories
@@ -144,6 +142,13 @@ class QuestionAugmenter:
 
 
     def augment_questions(self):
+        print(self.jinja_files)
+        ultra_filtered_questions = [item for item in self.initial_questions if item["category"] in self.augmented_categories]
+        print(f"Ultra filtered questions: {len(ultra_filtered_questions)}")
+        ultra_filtered_questions_file_path = os.path.join(self.dataset_path, "refusal/ultra_filtered_questions.jsonl")
+        with jsonlines.open(ultra_filtered_questions_file_path, mode='w') as writer:
+            writer.write_all(ultra_filtered_questions)
+        
         for category in self.augmented_categories:
             questions = [item for item in self.initial_questions if item["category"] == category]
             augmented_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, "initial")
