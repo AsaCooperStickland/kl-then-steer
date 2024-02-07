@@ -83,17 +83,19 @@ class Steering:
 				data.update(large_scale_concept_dataset(data_dir, mode=mode, consider_prompt=False))
 				# also include refusal
 				data.update(get_refusal_pairs(data_dir, mode=mode))
-      elif dataset_name == 'happiness_cropped':
+			elif "large_scale_concept_" in dataset_name:
+				concept = dataset_name.split('large_scale_concept_')[1]
+				data = get_single_concept_dataset(data_dir, mode=mode, concept=concept, consider_prompt=True)
+			elif dataset_name == 'happiness_cropped':
 				data = primary_emotions_concept_dataset(data_dir, mode=mode, emotions=['happiness_cropped',])
-				print(data)
 			elif dataset_name == 'refusal_data_A_B_cropped':
-				data = get_refusal_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/refusal_data_A_B_cropped.json")
+				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_cropped.json")
 			elif dataset_name == 'refusal_data_full_answers':
-				data = get_refusal_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/refusal_data_full_answers.json")
+				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_full_answers.json")
 			elif dataset_name == 'refusal_data_A_B_question_pairs':
-				data = get_prompt_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/refusal_data_A_B_question_pairs.json")
+				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_question_pairs.json")
 			elif dataset_name == 'filtered_questions_style_question_pairs':
-				data = get_prompt_pairs(data_dir, mode=mode, path="/scratch/al6759/lat/lat/finetuning/steering_data/filtered_questions_style_question_pairs.json")
+				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/filtered_questions_style_question_pairs.json")
 			else:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
 			data = preprocess_steering_data(data)

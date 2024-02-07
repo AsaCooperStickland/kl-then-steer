@@ -111,9 +111,16 @@ def large_scale_concept_dataset_quadratic(data_dir, mode, consider_prompt=True):
 			formatted_data[concept_key] = [[c,o] for c,o in zip(c_e, o_e)]
 	return formatted_data
 
+
 def get_single_emotion_dataset(data_dir, mode, emotion):
 	formatted_data = primary_emotions_concept_dataset(data_dir, mode)
 	return {emotion: formatted_data[emotion]}
+
+
+def get_single_concept_dataset(data_dir, mode, concept, consider_prompt=True):
+	formatted_data = large_scale_concept_dataset(data_dir, mode, consider_prompt=consider_prompt)
+	return {concept: formatted_data[concept]}
+
 
 def get_refusal_pairs(data_dir, mode="train", path=None):
 	assert mode in ["train", "test", "all"]

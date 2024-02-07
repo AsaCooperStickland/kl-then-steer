@@ -31,8 +31,7 @@ openai_key = os.getenv("OPENAI_API_KEY")
 anyscale_token = os.getenv("ANYSCALE_TOKEN")
 
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-client = OpenAI(api_key=openai_key,
-                organization='org-4L2GWAH28buzKOIhEAb3L5aq')
+client = OpenAI(api_key=openai_key)
 anyscale_client = OpenAI(
            base_url = "https://api.endpoints.anyscale.com/v1",
            api_key=anyscale_token)
@@ -175,8 +174,17 @@ def call_model_with_retries(prompt: List[str],
                 prompt, model_name, call_type, temperature, stop)
         except Exception as e:
             # return BadRequestError if we encounter it
-            if isinstance(e, BadRequestError) and len(prompt) == 1:
-                return [e]
+            # if isinstance(e, BadRequestError) and len(prompt) == 1:
+            #     print(f"Bad request error, returning BadRequestError for prompt {prompt[0]}...")
+            #     return [e]
+            # elif isinstance(e, BadRequestError):
+            #     response = []
+            #     print(f"Bad request error, splitting requests into batches of 1 and retrying...")
+            #     for p in prompt:
+            #         potential_response = call_model_with_retries(
+            #             [p], model_name, call_type, temperature, stop)
+            #         response.extend(potential_response)
+            # return response
             if num_retries == MAX_NUM_RETRIES:
                 raise e
             print(
@@ -249,16 +257,19 @@ def chat_batch_generate(
         return func(*args, **kwargs)
 
     def api_call(message):
-        response = retry_with_exp_backoff(
-            api_client.chat.completions.create,  # type: ignore
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": message},
-            ],
-            temperature=temperature,
-        )
-        return response
+        try:
+            response = retry_with_exp_backoff(
+                api_client.chat.completions.create,  # type: ignore
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": message},
+                ],
+                temperature=temperature,
+            )
+            return response
+        except BadRequestError as e:
+            return e
 
     answers = []
     if len(messages) == 1:

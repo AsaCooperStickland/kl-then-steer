@@ -135,7 +135,6 @@ def run_generation(
 
     steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
     trainer = SteeringTrainer(
-        steering=steering,
         model=model,
         steering=steering,
         args=training_args,
