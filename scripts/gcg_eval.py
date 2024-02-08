@@ -1,12 +1,12 @@
 import random
 from typing import Optional, Callable, Tuple
-from ..lat import utils 
-import autoDAN
+from baselines import autoDAN
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
 import argparse
 import torch
+from lat import utils 
 
 SYSTEM_PROMPT = f"<s>[INST] <<SYS>>\n{utils.system_prompt}\n<</SYS>>\n\n"
 
