@@ -6,8 +6,9 @@ import os
 from lat.utils import criminal_concepts, bad_concepts, neutral_concepts
 
 
-def primary_emotions_concept_dataset(data_dir, mode):
-	emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
+def primary_emotions_concept_dataset(data_dir, mode, emotions=None):
+	if emotions is None:
+		emotions = ["happiness", "sadness", "anger", "fear", "disgust", "surprise"]
 	raw_data = {}
 	for emotion in emotions:
 		with open(os.path.join(data_dir, 'repe', 'emotions', f'{emotion}.json')) as file:
@@ -110,18 +111,27 @@ def large_scale_concept_dataset_quadratic(data_dir, mode, consider_prompt=True):
 			formatted_data[concept_key] = [[c,o] for c,o in zip(c_e, o_e)]
 	return formatted_data
 
+
 def get_single_emotion_dataset(data_dir, mode, emotion):
 	formatted_data = primary_emotions_concept_dataset(data_dir, mode)
 	return {emotion: formatted_data[emotion]}
 
-def get_refusal_pairs(data_dir, mode="train"):
-	assert mode in ["train", "test"]
 
-	with open(os.path.join(data_dir, "refusal/refusal_data_A_B.json")) as file:
+def get_single_concept_dataset(data_dir, mode, concept, consider_prompt=True):
+	formatted_data = large_scale_concept_dataset(data_dir, mode, consider_prompt=consider_prompt)
+	return {concept: formatted_data[concept]}
+
+
+def get_refusal_pairs(data_dir, mode="train", path=None):
+	assert mode in ["train", "test", "all"]
+
+	if path is None:
+		path = os.path.join(data_dir, "refusal/refusal_data_A_B.json")
+	with open(path) as file:
 		raw_data = json.load(file)
 	if mode == "train":
 		raw_data = raw_data[:int(0.8 * len(raw_data))]
-	else:
+	if mode == 'test':
 		raw_data = raw_data[int(0.8 * len(raw_data)):]
 
 	c_e, o_e = [], []
@@ -136,4 +146,25 @@ def get_refusal_pairs(data_dir, mode="train"):
 	
 	pairs = list(zip(*[c_e, o_e]))
 	data = {"refusal": pairs}
+	return data
+
+def get_prompt_pairs(data_dir, mode="train", path=None):
+	assert mode in ["train", "test", "all"]
+
+	with open(path) as file:
+		raw_data = json.load(file)
+	if mode == "train":
+		raw_data = raw_data[:int(0.8 * len(raw_data))]
+	if mode == 'test':
+		raw_data = raw_data[int(0.8 * len(raw_data)):]
+
+	c_e, o_e = [], []
+	for item in raw_data:
+		neg_example = (item["bad_prompt"], '')
+		pos_example = (item['good_prompt'], '')
+		c_e.append(neg_example)
+		o_e.append(pos_example)
+	
+	pairs = list(zip(*[c_e, o_e]))
+	data = {"default_category": pairs}
 	return data

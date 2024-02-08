@@ -41,9 +41,12 @@ def main():
     parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
+    parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
     cmd_args = parser.parse_args()
 
     set_random_seed(cmd_args.seed)
+    if cmd_args.neftune_noise_alpha == 0.0:
+        cmd_args.neftune_noise_alpha = None
     
     os.environ['WANDB_PROJECT'] = 'lat'
     # os.environ["WANDB_DISABLED"] = "true"  # set wandb off for faster debug
@@ -86,6 +89,7 @@ def main():
         "bf16": True,
         "overwrite_output_dir": True,
         "seed": cmd_args.seed,
+        # "neftune_noise_alpha": cmd_args.neftune_noise_alpha,
         "flash_attn": cmd_args.flash_attn,
         "val_size": 0.2,
         "do_sample": True,

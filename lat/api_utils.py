@@ -17,7 +17,8 @@ from openai import OpenAI, BadRequestError
 
 
 MAX_NUM_RETRIES = 5
-CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview']
+CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview',
+               'gpt-3.5-turbo', 'gpt-3.5-turbo-0125', 'gpt-3.5-turbo-1106']
 OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001',
                  'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
 ANTHROPIC_MODELS = ['claude-2']
@@ -173,8 +174,17 @@ def call_model_with_retries(prompt: List[str],
                 prompt, model_name, call_type, temperature, stop)
         except Exception as e:
             # return BadRequestError if we encounter it
-            if isinstance(e, BadRequestError) and len(prompt) == 1:
-                return [e]
+            # if isinstance(e, BadRequestError) and len(prompt) == 1:
+            #     print(f"Bad request error, returning BadRequestError for prompt {prompt[0]}...")
+            #     return [e]
+            # elif isinstance(e, BadRequestError):
+            #     response = []
+            #     print(f"Bad request error, splitting requests into batches of 1 and retrying...")
+            #     for p in prompt:
+            #         potential_response = call_model_with_retries(
+            #             [p], model_name, call_type, temperature, stop)
+            #         response.extend(potential_response)
+            # return response
             if num_retries == MAX_NUM_RETRIES:
                 raise e
             print(
@@ -247,16 +257,19 @@ def chat_batch_generate(
         return func(*args, **kwargs)
 
     def api_call(message):
-        response = retry_with_exp_backoff(
-            api_client.chat.completions.create,  # type: ignore
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": message},
-            ],
-            temperature=temperature,
-        )
-        return response
+        try:
+            response = retry_with_exp_backoff(
+                api_client.chat.completions.create,  # type: ignore
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": message},
+                ],
+                temperature=temperature,
+            )
+            return response
+        except BadRequestError as e:
+            return e
 
     answers = []
     if len(messages) == 1:

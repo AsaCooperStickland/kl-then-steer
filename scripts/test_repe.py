@@ -51,7 +51,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         tokenizer.pad_token = tokenizer.eos_token
 
     # Loop through each multiplier
-    for multiplier in [-3.0, -1.5, 0.0, 1.5, 3.0]:
+    for multiplier in [0.0, 1.0, 1.5, 2.0, 2.5, 3.0]:
+        print(f"Generating with multiplier {multiplier}")
         answers = []
         trainer.steering.wrapped_model.reset()
         activations = trainer.steering.get_shift(coeff=multiplier, layer_id=layer_ids, mode="test", num_pairs=200)
@@ -87,19 +88,23 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             # Process generated texts
             for question, category, text in zip(batched_questions, batched_categories, generated_texts):
                 text = text.split("[/INST]")[-1].strip()
-                print(f"Question: {question}")
-                print(f"Category: {category}")
-                print(f"Answer: {text}")
-                print(
-                    f"Settings: multiplier {multiplier}, directory {directory}, question_type {question_type}")
+                # print(f"Question: {question}")
+                # print(f"Category: {category}")
+                # print(f"Answer: {text}")
+                # print(
+                #     f"Settings: multiplier {multiplier}, directory {directory}, question_type {question_type}")
                 answers.append({"question": question, "answer": text,
                                "category": category, "multiplier": multiplier})
+                print('Multipler:', multiplier)
+                print(text)
+                print('---')
 
         all_results.append({"multiplier": multiplier, "answers": answers})
+        trainer.steering.reset()
 
-    # Save results
-    with open(results_file, "w") as jfile:
-        json.dump(all_results, jfile)
+        # Save results after each multiplier finishes
+        with open(results_file, "w") as jfile:
+            json.dump(all_results, jfile)
 
 
 def run_generation(
@@ -111,7 +116,6 @@ def run_generation(
 ):
     model, tokenizer = load_model_and_tokenizer(
         model_args, finetuning_args, training_args.do_train, stage="sft")
-    
 
     tokenizer.padding_side = "left"  # use left-padding in generation
         
@@ -119,6 +123,8 @@ def run_generation(
     
     if custom_args['test_setting'] == "manual_jailbreaks":
         file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
+    elif custom_args['test_setting'] == "ultra_filtered":
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/ultra_filtered_questions.jsonl"
     else:
         file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
     
@@ -128,7 +134,7 @@ def run_generation(
             if 'question' in item:
                 item["question"] = prompt_format(item["question"])
                 questions.append(item)
-    
+
     steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
     trainer = SteeringTrainer(
         model=model,
@@ -151,8 +157,8 @@ def run_generation(
                 jailbreak_questions.append(
                     {"question": jailbreak_prompt + question["question"], "category": question["category"]})
             generate_with_vector(trainer, tokenizer, jailbreak_questions,
-                                    jailbreak_name, custom_args, question_type=f"{jailbreak_name}_")
-    elif custom_args["test_setting"] == "vanilla":
+                                    jailbreak_name, custom_args, question_type=f"{jailbreak_name}")
+    elif custom_args["test_setting"] == "vanilla" or custom_args["test_setting"] == "ultra_filtered":
         generate_with_vector(trainer, tokenizer, questions,
                              "vanilla_steering", custom_args)
     else:
@@ -177,9 +183,9 @@ def main():
     parser.add_argument('--base_directory', default='/scratch/alc9734/latent-adversarial-training/')
     parser.add_argument(
         '--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
-    parser.add_argument('--dataset', default='training_0')
+    parser.add_argument('--dataset', default='training_0')  # ignored!
     parser.add_argument('--steering_dataset', default='refusal_test')
-    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'manual_jailbreaks'])
+    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
@@ -227,9 +233,6 @@ def main():
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
-        "per_device_train_batch_size": 2,
-        "gradient_accumulation_steps": 4,
-        "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 1000,
         "learning_rate": 5e-5,
@@ -251,10 +254,14 @@ def main():
     callbacks = [LogCallback()]
     custom_args['finetuning_type'] = finetuning_args.finetuning_type
     custom_args['model_name_or_path'] = input_args['model_name_or_path']
-    output_folder_name = "vanilla_steering"
+    # output_folder_name = "vanilla_steering"
     directory_or_model_name_or_path = name_to_path[custom_args['model_name_or_path']] if custom_args['model_name_or_path'] in name_to_path else custom_args['model_name_or_path']
-    custom_args['results_path'] = f"{directory_or_model_name_or_path}/{output_folder_name}"
-    os.makedirs(f"{directory_or_model_name_or_path}/{output_folder_name}", exist_ok=True)
+    custom_args['results_path'] = directory_or_model_name_or_path
+    # custom_args['results_path'] = f"{directory_or_model_name_or_path}/{output_folder_name}"
+    os.makedirs(custom_args['results_path'], exist_ok=True)
+    # os.makedirs(f"{directory_or_model_name_or_path}/{output_folder_name}", exist_ok=True)
+    custom_args['subsample_steering_data'] = False
+    custom_args['mix_with_clean_data'] = False
     run_generation(model_args, training_args, finetuning_args,
          callbacks, custom_args)
 
