@@ -267,7 +267,7 @@ def main():
             # question_types = ["refusal"]
             question_types = "refusal_data_A_B_question_pairs refusal_data_full_answers large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail".split(" ")
             # all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
-            all_question_types = [f"{question_type}{jail_break}__gen" for jail_break in jail_breaks for question_type in question_types]
+            all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             # question_types = ["vanilla_"]
             for i, results_type in enumerate(all_question_types):
                 results_location = f"{directory}/{results_type}_results.json"
