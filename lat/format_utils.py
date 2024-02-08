@@ -9,6 +9,14 @@ from lat.utils import system_prompt
 
 random.seed(27)
 
+def json_to_questions(json_path: str) -> list:
+    questions = []
+    with open(json_path, 'r') as file:
+        for line in file:
+            data = json.loads(line)
+            questions.append(data['question'])
+    return questions
+
 
 def prompt_format(instruction):
     B_INST, E_INST = "[INST]", "[/INST]"
