@@ -103,7 +103,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         trainer.steering.reset()
 
         # Save results after each multiplier finishes
-        with open(f"{custom_args['results_path']}/{custom_args['steering_dataset']}_{question_type}_gen_results.json", "w") as jfile:
+        with open(results_file, "w") as jfile:
             json.dump(all_results, jfile)
 
 
@@ -123,6 +123,8 @@ def run_generation(
     
     if custom_args['test_setting'] == "manual_jailbreaks":
         file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
+    elif custom_args['test_setting'] == "ultra_filtered":
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/ultra_filtered_questions.jsonl"
     else:
         file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
     
@@ -156,7 +158,7 @@ def run_generation(
                     {"question": jailbreak_prompt + question["question"], "category": question["category"]})
             generate_with_vector(trainer, tokenizer, jailbreak_questions,
                                     jailbreak_name, custom_args, question_type=f"{jailbreak_name}")
-    elif custom_args["test_setting"] == "vanilla":
+    elif custom_args["test_setting"] == "vanilla" or custom_args["test_setting"] == "ultra_filtered":
         generate_with_vector(trainer, tokenizer, questions,
                              "vanilla_steering", custom_args)
     else:
@@ -183,7 +185,7 @@ def main():
         '--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')  # ignored!
     parser.add_argument('--steering_dataset', default='refusal_test')
-    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'manual_jailbreaks'])
+    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
@@ -231,9 +233,6 @@ def main():
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
-        "per_device_train_batch_size": 2,
-        "gradient_accumulation_steps": 4,
-        "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 1000,
         "learning_rate": 5e-5,

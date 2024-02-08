@@ -125,8 +125,8 @@ def get_single_concept_dataset(data_dir, mode, concept, consider_prompt=True):
 def get_refusal_pairs(data_dir, mode="train", path=None):
 	assert mode in ["train", "test", "all"]
 
-	# if path is None:
-	# 	path = os.path.join(data_dir, "refusal/refusal_data_A_B.json")
+	if path is None:
+		path = os.path.join(data_dir, "refusal/refusal_data_A_B.json")
 	with open(path) as file:
 		raw_data = json.load(file)
 	if mode == "train":
