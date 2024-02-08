@@ -77,7 +77,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
 
     print(f"Evaluating {sum(len(v) for v in all_prompts.values())} prompts.")
             
-    batch_size = 32
+    batch_size = 100
     multiplier_keys_sorted = sorted(all_prompts.keys())
     all_prompts_only = []
     for multiplier_key in multiplier_keys_sorted:
@@ -128,7 +128,10 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
 
 def filter_categorized_data(categorized_data, test_set_questions, multiplier=0.0, strict_categories=None, 
                             verbose=False):
-    potential_questions = set([entry["question"] for entry in categorized_data[f"multiplier_{multiplier}"]])
+    multiplier_key = f"multiplier_{multiplier}"
+    if multiplier_key not in categorized_data:
+        return categorized_data
+    potential_questions = set([entry["question"] for entry in categorized_data[multiplier_key]])
     # assert test_set_questions.issubset(potential_questions)
     if not test_set_questions.issubset(potential_questions):
         if verbose:
@@ -158,10 +161,10 @@ def get_average_scores_json(categorized_data, grouped_categories_dict, multiplie
             continue
         scores = [entry for entry in multiplier_data if entry["score"] != -1]
         average_scores[multiplier_key] = {}
-        for entry in multiplier_data:
-            if entry["score"] > 2:
-                print(entry["question"])
-                print(entry["answer"])
+        # for entry in multiplier_data:
+        #     if entry["score"] > 2:
+        #         print(entry["question"])
+        #         print(entry["answer"])
         for vec_name in ["pca"]:
             average_scores[multiplier_key][vec_name] = {}
             vec_scores = [entry["score"]
@@ -232,7 +235,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 
 def main():
     verbose = False
-    overwrite = False
+    overwrite = True
     strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
     evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -265,7 +268,7 @@ def main():
             # jail_breaks = ["", "_4chan", "_aligned", "_confidant"]
             # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
             # question_types = ["refusal"]
-            question_types = "refusal_data_A_B_question_pairs refusal_data_full_answers large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail".split(" ")
+            question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
             # all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             # question_types = ["vanilla_"]
