@@ -182,15 +182,16 @@ def get_average_scores_json(categorized_data, grouped_categories_dict, multiplie
                 if len(category_scores) > 0:
                     average_scores[multiplier_key][vec_name][category] = sum(
                             category_scores) / len(category_scores)
-            for category_type in grouped_categories_dict:
-                category_scores = []
-                for category in grouped_categories_dict[category_type]:
-                    if category in average_scores[multiplier_key][vec_name]:
-                        category_scores.append(
-                            average_scores[multiplier_key][vec_name][category])
-                if len(category_scores) > 0:
-                    average_scores[multiplier_key][vec_name][category_type] = sum(
-                        category_scores) / len(category_scores)
+            if grouped_categories_dict:
+                for category_type in grouped_categories_dict:
+                    category_scores = []
+                    for category in grouped_categories_dict[category_type]:
+                        if category in average_scores[multiplier_key][vec_name]:
+                            category_scores.append(
+                                average_scores[multiplier_key][vec_name][category])
+                    if len(category_scores) > 0:
+                        average_scores[multiplier_key][vec_name][category_type] = sum(
+                            category_scores) / len(category_scores)
     return average_scores
 
 
@@ -208,8 +209,9 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
                     if category_type in multiplier_data[vec_name]:
                         category_list.append(category_type)
     else:
-        category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
-                         "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
+        category_list = ["percentage", "average", "race_bias", "nationality_bias", "illegal_activity", "misc"]
+        # category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
+        #                  "political_bias", "illegal_activity", "capability", "human_only", "power_seeking"]
     if print_header:
         csv = ", , , "
         for category in category_list:
@@ -235,7 +237,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 
 def main():
     verbose = False
-    overwrite = True
+    overwrite = False
     strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
     evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -248,7 +250,7 @@ def main():
     augmenter = QuestionAugmenter(dataset_path="datasets", 
                                   jailbreaks_path=jailbreaks_path,
                                   jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
-    grouped_categories_dict = augmenter.get_all_category_keys()
+    grouped_categories_dict = None # augmenter.get_all_category_keys()
 
     test_set_questions_file = "datasets/refusal/augmented_questions.jsonl"
     test_set_questions = set()

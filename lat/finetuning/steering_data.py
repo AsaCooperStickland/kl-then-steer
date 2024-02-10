@@ -122,11 +122,14 @@ def get_single_concept_dataset(data_dir, mode, concept, consider_prompt=True):
 	return {concept: formatted_data[concept]}
 
 
-def get_refusal_pairs(data_dir, mode="train", path=None):
+def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False):
 	assert mode in ["train", "test", "all"]
 
 	if path is None:
-		path = os.path.join(data_dir, "refusal/refusal_data_A_B.json")
+		if full_answer:
+			path = os.path.join(data_dir, "refusal/refusal_data.json")
+		else:
+			path = os.path.join(data_dir, "refusal/refusal_data_A_B.json")
 	with open(path) as file:
 		raw_data = json.load(file)
 	if mode == "train":
@@ -137,8 +140,10 @@ def get_refusal_pairs(data_dir, mode="train", path=None):
 	c_e, o_e = [], []
 	for item in raw_data:
 		question = item["question"]
-		pos_answer = item["answer_matching_behavior"].strip()
-		neg_answer = item["answer_not_matching_behavior"].strip()
+		positive_key = "decline_answer" if full_answer else "answer_matching_behavior"
+		negative_key = "respond_answer" if full_answer else "answer_not_matching_behavior"
+		pos_answer = item[positive_key].strip()
+		neg_answer = item[negative_key].strip()
 		pos_example = (question, pos_answer)
 		neg_example = (question, neg_answer)
 		c_e.append(neg_example)

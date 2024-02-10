@@ -37,7 +37,10 @@ def main():
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--buffer_size', type=int, default=0)
+    parser.add_argument('--rep_token', default=-1)
+    parser.add_argument('--direction_method', default='pca', choices=['random', 'pca', 'cluster_mean'])
     parser.add_argument('--steering_coeff', type=float, default=None)
+    parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
@@ -60,7 +63,9 @@ def main():
         'samples_freq': cmd_args.samples_freq,
         'buffer_size': cmd_args.buffer_size,
         'run_name': cmd_args.run_name,
-        'mix_with_clean_data': False,
+        'rep_token': cmd_args.rep_token,
+        'direction_method': cmd_args.direction_method,
+        'steering_probability': cmd_args.steering_probability,
         'subsample_steering_data': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }

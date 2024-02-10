@@ -58,10 +58,17 @@ class Steering:
 		tokenizer.bos_token_id = 1
 		self.tokenizer = tokenizer
 
-		self.rep_token = -1
+		self.rep_token = custom_args['rep_token']
 		self.hidden_layers = list(range(-1, -self.model.config.num_hidden_layers, -1))
 		self.n_difference = 1
-		self.direction_method = 'pca'
+		self.direction_method = custom_args["direction_method"]
+		self.repe_key = f"rep_token_{self.rep_token}_hidden_layers_{self.hidden_layers[0]},{self.hidden_layers[-1]}_n_difference_{self.n_difference}_direction_method_{self.direction_method}"
+		if self.rep_token == "none":
+			self.rep_token = None
+		# account for the previous code
+		if (self.hidden_layers ==list(range(-1, -self.model.config.num_hidden_layers, -1)) 
+	        and self.n_difference == 1 and self.direction_method == 'pca' and self.rep_token == -1):
+			self.repe_key = "pca"
 		self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer, device='cuda')
 		if custom_args["buffer_size"] > 0:
 			self.directions_buffer = {}
@@ -75,6 +82,13 @@ class Steering:
 			elif 'emotions_' in dataset_name:
 				emotion = dataset_name.split('_')[1]
 				data = get_single_emotion_dataset(data_dir, mode=mode, emotion=emotion)
+			elif dataset_name == 'working_concepts':
+				data = primary_emotions_concept_dataset(data_dir, mode=mode)
+				data.update(get_refusal_pairs(data_dir, mode=mode, full_answer=True))
+				data.update(large_scale_concept_dataset(data_dir, mode=mode))
+				working_concept_list = ['refusal', 'anger', 'fear', 'sadness', 'sleazy', 'cruel', 'happiness', 'mean', 'blackmail',
+							'ruthless']
+				data = {k: v for k, v in data.items() if k in working_concept_list}
 			elif dataset_name == 'large_scale_concept':
 				data = large_scale_concept_dataset(data_dir, mode=mode)
 				# extend data with quadratic prompts
@@ -113,9 +127,13 @@ class Steering:
 	
 	def sample_coeff(self):
 		c = self.custom_args['steering_coeff']
-		# sample a range between -1 and 1
-		c = c * random.uniform(-1, 1)
-		return (c if random.random() < 0.5 else 0.0) if self.custom_args['mix_with_clean_data'] else c
+		# sample a range between 0 and 1
+		c = c * random.uniform(0, 1)
+		# c is only nonzero with probability given by steering_probability
+		if random.random() < self.custom_args['steering_probability']:
+			return c
+		else:
+			return 0.0
 
 	def sample_pairs(self, data, num_pairs):
 		"""
@@ -186,14 +204,19 @@ class Steering:
 		# with 50% probability return the latest vector, otherwise sample from the buffer
 		if random.random() < 0.5:
 			return self.directions_buffer[layer][-1]
-		subsample_size = min(int(len(self.directions_buffer[layer]) / 5), 10)
+		subsample_size = min(int(len(self.directions_buffer[layer]) / 5), 5)
+		subsample_size = max(1, subsample_size)
 		subsampled_vectors = random.sample(self.directions_buffer[layer], subsample_size)
+		if len(subsampled_vectors) == 1:
+			return subsampled_vectors[0]
 		# return the average of the subsampled vectors
 		return np.mean(subsampled_vectors, axis=0)
 	
 	def do_shift(self, mode, coeff=None):
 		if coeff is None:
 			coeff = self.sample_coeff()
+		if coeff == 0.0:
+			return
 		activations = self.get_shift(coeff=coeff, layer_id=self.layer_id, num_pairs=40, mode=mode)
 		self.wrapped_model.reset()
 		for key in activations:

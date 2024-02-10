@@ -64,6 +64,12 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             answers = existing_results[multiplier]
             # filter question is for existing answers
             existing_questions = set([a["question"] for a in answers])
+            # delete any questions without the correct steering key
+            for a in answers:
+                if "vector_type" not in a:
+                    a["vector_type"] = "pca"
+                if a["vector_type"] != trainer.steering.repe_key:
+                    answers.remove(a)
             new_questions = [q for q in questions if q["question"] not in existing_questions]
         else:
             new_questions = deepcopy(questions)
@@ -93,7 +99,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                 # print(f"Answer: {text}")
                 # print(
                 #     f"Settings: multiplier {multiplier}, directory {directory}, question_type {question_type}")
-                answers.append({"question": question, "answer": text,
+                answers.append({"question": question, "answer": text, "vector_type": trainer.steering.repe_key,
                                "category": category, "multiplier": multiplier})
                 print('Multipler:', multiplier)
                 print(text)
@@ -187,6 +193,9 @@ def main():
     parser.add_argument('--steering_dataset', default='refusal_test')
     parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
     parser.add_argument('--samples_dir', default='samples')
+    parser.add_argument('--rep_token', default=-1)
+    parser.add_argument('--direction_method', default='pca',
+                        choices=['random', 'pca', 'cluster_mean'])
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
@@ -213,6 +222,8 @@ def main():
         'test_setting': cmd_args.test_setting,
         'samples_dir': cmd_args.samples_dir,
         'buffer_size': cmd_args.buffer_size,
+        'rep_token': cmd_args.rep_token,
+        'direction_method': cmd_args.direction_method,
         'samples_freq': cmd_args.samples_freq,
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,
