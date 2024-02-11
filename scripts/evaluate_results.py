@@ -1,4 +1,5 @@
 import json
+import argparse
 import os
 import re
 import jsonlines
@@ -36,7 +37,9 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
                        directory, question_type, evaluate_multiplier=None,
                        use_existing=True, test_set_questions=None, strict_categories=None):
     """Categorizes the results using the classifier and stores them as JSON."""
-    categorized_results_file = f"{directory}/{question_type}_categorized_results.json"
+    # categorized_results_file = f"{directory}/{question_type}_categorized_results.json"
+    model_name_suffix = "" if model_name == "gpt-4-0125-preview" else f"_{model_name}"
+    categorized_results_file = f"{directory}/{question_type}_categorized_results{model_name_suffix}.json"
     if use_existing and os.path.exists(categorized_results_file):
         with open(categorized_results_file, "r") as f:
             categorized_data = json.load(f)
@@ -46,8 +49,11 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
     all_prompts = defaultdict(list)
     for multiplier_data in results:
         multiplier = multiplier_data["multiplier"]
-        if evaluate_multiplier:
-            if multiplier != evaluate_multiplier:
+        if evaluate_multiplier is not None:
+            print(f"Evaluating multiplier {evaluate_multiplier}")
+            print(f"Current multiplier: {multiplier}")
+            if str(multiplier) != str(evaluate_multiplier):
+                print(f"Skipping multiplier {multiplier}")
                 continue
         multiplier_key = f"multiplier_{multiplier}"
         existing_results = categorized_data.get(
@@ -236,21 +242,40 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
 
 
 def main():
-    verbose = False
-    overwrite = False
-    strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
-    evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
+    # verbose = False
+    # overwrite = False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verbose", action="store_true", help="Print verbose output.")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing categorized results.")
+    parser.add_argument("--evaluation_type", type=str, default="full",
+                        help="The type of evaluation to perform.", choices=["full", "restricted"])
+    args = parser.parse_args()
+    verbose = args.verbose
+    overwrite = args.overwrite
+    if args.evaluation_type == "restricted":
+        strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
+        evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
+    else:
+        strict_categories = None
+        evaluated_multipliers = [0.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
     # models = ["run_no_steer_full/checkpoint-1000", "run_persuasion_0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
     # models += ["run_2/checkpoint-4000", "run_no_steer_full/checkpoint-4000", "run_persuasion_0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"]
     # models += ["run_2/checkpoint-16000", "run_no_steer_full/checkpoint-16000", "run_persuasion_0.5/checkpoint-16000", "run_large_scale_concept_1/checkpoint-16000"]
     # models += ["llama-2-7b-chat", "llama-2-13b-chat"]
     # models += ["run2_persuasion_0.5"]
-    models = ["llama-2-7b-chat"]
-    augmenter = QuestionAugmenter(dataset_path="datasets", 
-                                  jailbreaks_path=jailbreaks_path,
-                                  jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
-    grouped_categories_dict = None # augmenter.get_all_category_keys()
+    if args.evaluation_type == "restricted":
+        grouped_categories_dict = None 
+        models = ["llama-2-7b-chat"]
+    else:
+        augmenter = QuestionAugmenter(dataset_path="datasets", 
+                                      jailbreaks_path=jailbreaks_path,
+                                      jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
+        grouped_categories_dict = augmenter.get_all_category_keys()
+        models = ["llama-2-7b-chat", "run2_persuasion_0.5"]
+        for steering_fraction in [0.125, 0.25, 0.5]:
+            models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
+            models.append(f"run2_working_concepts_{steering_fraction}/checkpoint-12000")
 
     test_set_questions_file = "datasets/refusal/augmented_questions.jsonl"
     test_set_questions = set()
@@ -270,7 +295,10 @@ def main():
             # jail_breaks = ["", "_4chan", "_aligned", "_confidant"]
             # question_types = ["refusal_test", "emotions_happiness", "emotions_anger"]
             # question_types = ["refusal"]
-            question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
+            if args.evaluation_type == "restricted":
+                question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
+            else:
+                question_types = ["refusal"]
             # all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             # question_types = ["vanilla_"]
@@ -287,7 +315,8 @@ def main():
                     classifier_prompt = f.read()
                 model_name = "gpt-3.5-turbo-1106" # "gpt-4-0125-preview" #"gpt-3.5-turbo-16k-0613"
                 call_type = "sample"  # or "logprobs"
-                categorized_results_file = f"{directory}/{results_type}_categorized_results.json"
+                model_name_suffix = "" if model_name == "gpt-4-0125-preview" else f"_{model_name}"
+                categorized_results_file = f"{directory}/{results_type}_categorized_results{model_name_suffix}.json"
                 if overwrite or not os.path.exists(categorized_results_file):
                     categorized_results = categorize_results(
                         results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_multiplier=evaluated_multiplier,
