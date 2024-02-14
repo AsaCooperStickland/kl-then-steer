@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 from anthropic import Anthropic
 from openai import OpenAI, BadRequestError
 
+from lat.model_response_cache import ModelResponse, ModelResponseCache
+
 
 MAX_NUM_RETRIES = 5
 CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview',
@@ -35,13 +37,6 @@ client = OpenAI(api_key=openai_key)
 anyscale_client = OpenAI(
            base_url = "https://api.endpoints.anyscale.com/v1",
            api_key=anyscale_token)
-
-
-@dataclass
-class ModelResponse:
-    model_name: str
-    content: str
-    stop_reason: str
 
 
 def get_generic_response(response, model_name):
@@ -87,14 +82,11 @@ def extract_score(classification_str):
 do_cache = True
 if do_cache:
     # load cache if it exists
-    if os.path.exists('cache.json'):
-        with open('cache.json', 'r') as f:
-            CACHE = json.load(f)
-    else:
-        # Global cache for model responses
-        CACHE = defaultdict(dict)
+    print("loading cache...")
+    CACHE = ModelResponseCache(db_path='model_responses_cache.db')
+    print("cache loaded")
 else:
-    CACHE = defaultdict(dict)
+    CACHE = None
 
 
 def batch_prompts(prompts, batch_size=5):
@@ -108,29 +100,12 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
     """Calls the model with retries for batched prompts and caches the results."""
     responses = []
 
-    def format_key(model_name, prompt):
-        return f"MODEL_NAME: {model_name} PROMPT: {prompt}"
-    
-    def model_response_to_json(model_response):
-        return {
-            "model_name": model_response.model_name,
-            "content": model_response.content,
-            "stop_reason": model_response.stop_reason,
-        }
-    
-    def json_to_model_response(json_response):
-        return ModelResponse(
-            model_name=json_response["model_name"],
-            content=json_response["content"],
-            stop_reason=json_response["stop_reason"],
-        )
-    
     for prompts in tqdm(batched_prompts):
         # Check cache first
-        cached_responses = [json_to_model_response(CACHE[format_key(model_name, prompt)])
-                            for prompt in prompts if format_key(model_name, prompt) in CACHE]
-        cached_prompts = [prompt for prompt in prompts if format_key(model_name, prompt) in CACHE]
-        uncached_prompts = [prompt for prompt in prompts if format_key(model_name, prompt) not in CACHE]
+        cached_responses = [CACHE.get_cached_response(model_name, prompt)
+                            for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
+        cached_prompts = [prompt for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
+        uncached_prompts = [prompt for prompt in prompts if not CACHE.is_key_stored(model_name, prompt)]
 
         if uncached_prompts:
             model_responses = call_model_with_retries(
@@ -142,18 +117,10 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
             
             for prompt, response in zip(uncached_prompts, model_responses):
                 response = get_generic_response(response, model_name)
-                CACHE[format_key(model_name, prompt)] = model_response_to_json(response)
+                CACHE.cache_response(model_name, prompt, response)
                 responses.append(response)
-            # save cache
-            if do_cache:
-                with open('cache.json', 'w') as f:
-                    json.dump(CACHE, f)
                 
         for cached_prompt, cached_response in zip(cached_prompts, cached_responses):
-            if not isinstance(cached_response, ModelResponse):
-                cached_response = get_generic_response(
-                    cached_response, model_name)
-                CACHE[format_key(model_name, cached_prompt)] = cached_response
             responses.append(cached_response)
         # responses.extend(cached_responses)
 
