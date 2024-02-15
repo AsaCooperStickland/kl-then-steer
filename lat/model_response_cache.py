@@ -55,18 +55,3 @@ class ModelResponseCache:
             SELECT EXISTS(SELECT 1 FROM responses WHERE model_name = ? AND prompt = ? LIMIT 1)
             ''', (model_name, prompt))
             return c.fetchone()[0] == 1
-
-
-# Example usage
-cache = ModelResponseCache()
-
-# To cache a response
-response_to_cache = ModelResponse(model_name="exampleModel", content="Here is the response content", stop_reason="completed")
-cache.cache_response(response_to_cache.model_name, "example prompt", response_to_cache)
-
-# To retrieve a cached response
-cached_response = cache.get_cached_response("exampleModel", "example prompt")
-if cached_response:
-    print(f"Retrieved cached response: {cached_response.content}, stop reason: {cached_response.stop_reason}")
-else:
-    print("No cache entry found.")
