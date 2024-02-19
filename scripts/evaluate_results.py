@@ -115,7 +115,6 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
             #     print(classification_output)
             if score is None:
                 score = -1
-            # print(f"{score}\n\nthis is the score")
 
             # Storing the result with its classification
             entry["score"] = score
@@ -257,7 +256,7 @@ def main():
         evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
     else:
         strict_categories = None
-        evaluated_multipliers = [0.0]
+        evaluated_multipliers = [-2.0, -1.5, 0.0, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
     # models = ["run_no_steer_full/checkpoint-1000", "run_persuasion_0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
     # models += ["run_2/checkpoint-4000", "run_no_steer_full/checkpoint-4000", "run_persuasion_0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"]
@@ -272,10 +271,13 @@ def main():
                                       jailbreaks_path=jailbreaks_path,
                                       jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
         grouped_categories_dict = augmenter.get_all_category_keys()
-        models = ["llama-2-7b-chat", "run2_persuasion_0.5"]
+        models = ["run2_persuasion_0.5"]
         for steering_fraction in [0.125, 0.25, 0.5]:
-            models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
-            models.append(f"run2_working_concepts_{steering_fraction}/checkpoint-12000")
+            # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
+            # models.append(f"run2_working_concepts_{steering_fraction}/checkpoint-12000")
+            models.append(f"run2_persuasion_working_concepts_{steering_fraction}")
+            models.append(f"run2_working_concepts_{steering_fraction}")
+        models += ["llama-2-7b-chat", "llama-2-13b-chat"]
 
     test_set_questions_file = "datasets/refusal/augmented_questions.jsonl"
     test_set_questions = set()
@@ -299,6 +301,7 @@ def main():
                 question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
             else:
                 question_types = ["refusal"]
+                question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
             # all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             # question_types = ["vanilla_"]

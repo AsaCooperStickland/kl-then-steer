@@ -51,7 +51,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         tokenizer.pad_token = tokenizer.eos_token
 
     # Loop through each multiplier
-    for multiplier in [0.0, 1.0, 1.5, 2.0, 2.5, 3.0]:
+    for multiplier in [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]:
         print(f"Generating with multiplier {multiplier}")
         answers = []
         trainer.steering.wrapped_model.reset()

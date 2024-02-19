@@ -8,7 +8,7 @@ from transformers import DataCollatorWithPadding
 from transformers.optimization import get_scheduler
 from trl import PPOConfig
 
-from llmtuner.data import get_dataset
+from lat.data.loader import get_dataset
 from llmtuner.extras.callbacks import FixValueHeadModelCallback
 from llmtuner.extras.misc import fix_valuehead_checkpoint
 from llmtuner.extras.ploting import plot_loss

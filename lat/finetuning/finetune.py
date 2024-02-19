@@ -1,4 +1,4 @@
-from llmtuner.model import get_train_args
+from llmtuner.hparams import get_train_args
 import argparse
 from datetime import datetime
 import os
@@ -8,6 +8,7 @@ import torch
 import sys
 from llmtuner.extras.callbacks import LogCallback
 from workflow import run_sft
+from ppo_workflow import run_ppo
 # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 
@@ -26,6 +27,7 @@ def main():
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
     parser.add_argument('--flash_attn', action='store_true')
+    parser.add_argument('--stage', default='sft', choices=['sft', 'ppo'])
     parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
     parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
     parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
@@ -71,7 +73,7 @@ def main():
     }
 
     input_args = {
-        "stage": "sft",
+        "stage": cmd_args.stage,
         "model_name_or_path": "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf",
         "do_train": True,
         "template": cmd_args.template,
@@ -88,7 +90,9 @@ def main():
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 4000,
-        "learning_rate": 5e-5,
+        "learning_rate": 5e-5 if cmd_args.stage == "sft" else 1e-5,
+        "reward_model": "OpenAssistant/reward-model-deberta-v3-large-v2",
+        'reward_model_type': 'full',
         "num_train_epochs": cmd_args.num_train_epochs,
         "plot_loss": True,
         "bf16": True,
@@ -100,8 +104,8 @@ def main():
         "do_sample": True,
         "max_new_tokens": 80,
         "temperature": 1.0,
-        "top_p": 1,
-        "top_k": 50,
+        "top_p": 1 if cmd_args.stage == "sft" else 0.9,
+        "top_k": 50 if cmd_args.stage == "sft" else 0,
         "length_penalty": 1.0,
     }
 
@@ -118,7 +122,10 @@ def main():
             custom_args['steering_coeff'] = 3.0
         else:
             custom_args['steering_coeff'] = 1.5
-    run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
+    if finetuning_args.stage == "sft":
+        run_sft(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
+    else:
+        run_ppo(model_args, data_args, training_args, finetuning_args, generating_args, callbacks, custom_args)
 
 if __name__ == "__main__":
     main()
