@@ -14,9 +14,10 @@ from llmtuner.extras.misc import fix_valuehead_checkpoint
 from llmtuner.extras.ploting import plot_loss
 from llmtuner.model import load_model_and_tokenizer
 from llmtuner.train.ppo.trainer import CustomPPOTrainer
-from llmtuner.train.utils import create_ref_model, create_reward_model
+from llmtuner.train.utils import create_ref_model
 
 from lat.finetuning.steering import Steering
+from lat.finetuning.reward_model import create_reward_model
 from lat.finetuning.samples_callback import SamplesCallback
 from lat.finetuning.ppo_trainer import SteeringPPOTrainer
 
@@ -46,6 +47,7 @@ def run_ppo(
 
     # Create reference model and reward model
     ref_model = create_ref_model(model_args, finetuning_args, add_valuehead=True)
+
     reward_model = create_reward_model(model, model_args, finetuning_args)
 
     # Create ppo config
