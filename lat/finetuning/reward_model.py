@@ -2,7 +2,8 @@ from typing import TYPE_CHECKING, Optional, Union
 import os
 import torch
 from torch import nn
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers.integrations import is_deepspeed_zero3_enabled
 from huggingface_hub import snapshot_download
 
 from llmtuner.extras.logging import get_logger
@@ -18,15 +19,28 @@ logger = get_logger(__name__)
 
 
 class GPTRewardModel(nn.Module):
-    def __init__(self, model_path):
+    def __init__(self, model_args):
         super().__init__()
-        model = AutoModelForCausalLM.from_pretrained(model_path)
+        config_kwargs = {
+        "trust_remote_code": True,
+        "cache_dir": model_args.cache_dir,
+        "revision": model_args.model_revision,
+        "token": model_args.hf_hub_token,
+            }
+        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+        model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path,
+            config=config,
+            torch_dtype=model_args.compute_dtype,
+            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
+            device_map="cuda:1",
+            **config_kwargs,
+        )
         self.config = model.config
         self.config.n_embd = self.config.hidden_size if hasattr(self.config, "hidden_size") else self.config.n_embd
         self.model = model
         self.transformer = model.model
         self.v_head = nn.Linear(self.config.n_embd, 1, bias=False)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
         self.tokenizer.pad_token = self.tokenizer.unk_token
         self.PAD_ID = self.tokenizer(self.tokenizer.pad_token)["input_ids"][0]
 
@@ -44,6 +58,8 @@ class GPTRewardModel(nn.Module):
         input_ids, attention_mask: torch.Size([bs, seq_len])
         return: scores: List[bs]
         """
+        input_ids = input_ids.to(self.get_device())
+        attention_mask = attention_mask.to(self.get_device())
         base_model_output = self.transformer(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -51,25 +67,25 @@ class GPTRewardModel(nn.Module):
         )
 
         last_hidden_state = base_model_output.hidden_states[-1]
-        lm_logits = base_model_output.logits
-        loss = base_model_output.loss
+        # lm_logits = base_model_output.logits
+        # loss = base_model_output.loss
 
-        if last_hidden_state.device != self.v_head.summary.weight.device:
-            last_hidden_state = last_hidden_state.to(self.v_head.summary.weight.device)
+        if last_hidden_state.device != self.v_head.weight.device:
+            last_hidden_state = last_hidden_state.to(self.v_head.weight.device)
 
         value = self.v_head(last_hidden_state).squeeze(-1)
 
         # force upcast in fp32 if logits are in half-precision
-        if lm_logits.dtype != torch.float32:
-            lm_logits = lm_logits.float()
+        # if lm_logits.dtype != torch.float32:
+        #     lm_logits = lm_logits.float()
 
-        return (lm_logits, loss, value)
+        return (None, None, value)
 
 
 ## Load the model and tokenizer
-def get_starling_reward_model(base_model):
-    assert base_model in ["meta-llama/Llama-2-7b-hf", "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf"]
-    reward_model = GPTRewardModel(base_model)
+def get_starling_reward_model(model_args):
+    assert model_args.model_name_or_path in ["meta-llama/Llama-2-7b-hf", "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf"]
+    reward_model = GPTRewardModel(model_args)
     reward_tokenizer = reward_model.tokenizer
     reward_tokenizer.truncation_side = "left"
     
@@ -112,8 +128,9 @@ def create_reward_model(
         logger.info("Loaded adapter weights of reward model from {}".format(finetuning_args.reward_model))
         return None
     elif finetuning_args.reward_model_type == "starling":
-        reward_model = get_starling_reward_model(model_args.model_name_or_path)
+        reward_model = get_starling_reward_model(model_args)
         reward_model = reward_model.to(model_args.compute_dtype) if not getattr(reward_model, "quantization_method", None) else reward_model
+        reward_model = reward_model.to(torch.device("cuda:1"))
         return reward_model
     else:
         reward_model_args_dict = model_args.to_dict()

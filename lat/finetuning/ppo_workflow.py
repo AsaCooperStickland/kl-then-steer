@@ -4,6 +4,7 @@ import math
 from typing import TYPE_CHECKING, List, Optional
 
 from torch.optim import AdamW
+import torch
 from transformers import DataCollatorWithPadding
 from transformers.optimization import get_scheduler
 from trl import PPOConfig
@@ -40,15 +41,20 @@ def run_ppo(
     model, tokenizer = load_model_and_tokenizer(
         model_args, finetuning_args, training_args.do_train, add_valuehead=True
     )
+    model = model.to(torch.device("cuda:0"))
+
+    print("Loading dataset")
     dataset = get_dataset(tokenizer, model_args, data_args, training_args, stage="ppo")
 
     tokenizer.padding_side = "left"  # use left-padding in generation while using right-padding in training
+    print("Loading data collator")
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     # Create reference model and reward model
     ref_model = create_ref_model(model_args, finetuning_args, add_valuehead=True)
 
     reward_model = create_reward_model(model, model_args, finetuning_args)
+
 
     # Create ppo config
     backward_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
@@ -71,6 +77,7 @@ def run_ppo(
     )
 
     # Create optimizer and scheduler
+    print("Creating optimizer")
     optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=training_args.learning_rate)
     if training_args.max_steps > 0:
         num_training_steps = training_args.max_steps

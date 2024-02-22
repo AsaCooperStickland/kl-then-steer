@@ -47,6 +47,7 @@ def main():
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
     parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
+    parser.add_argument('--local_rank', type=int, default=0)
     cmd_args = parser.parse_args()
 
     set_random_seed(cmd_args.seed)
@@ -93,6 +94,9 @@ def main():
         "learning_rate": 5e-5 if cmd_args.stage == "sft" else 1e-5,
         "reward_model": "starling",
         'reward_model_type': 'starling',
+        # "reward_model": "alikhan0100u/Llama-2-7b-oasst-preference-reward-model-adapter",
+        # 'reward_model_type': 'lora',
+        # "ref_model_quantization_bit": 4,
         "num_train_epochs": cmd_args.num_train_epochs,
         "plot_loss": True,
         "bf16": True,
@@ -107,6 +111,8 @@ def main():
         "top_p": 1 if cmd_args.stage == "sft" else 0.9,
         "top_k": 50 if cmd_args.stage == "sft" else 0,
         "length_penalty": 1.0,
+        "deepspeed": "/scratch/alc9734/latent-adversarial-training/ds_config.json",
+        "local_rank": cmd_args.local_rank,
     }
 
     model_args, data_args, training_args, finetuning_args, generating_args = get_train_args(input_args)
