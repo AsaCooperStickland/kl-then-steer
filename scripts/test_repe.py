@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Optional, List
 from copy import deepcopy
 
 from transformers import Seq2SeqTrainingArguments
-from llmtuner.model import load_model_and_tokenizer, get_train_args
+from llmtuner.model import load_model_and_tokenizer
+from llmtuner.hparams import get_train_args
 from llmtuner.extras.callbacks import LogCallback
 from lat.utils import system_prompt, data_path, jailbreaks_path
 from lat.format_utils import prompt_format
@@ -121,7 +122,7 @@ def run_generation(
     custom_args=None,
 ):
     model, tokenizer = load_model_and_tokenizer(
-        model_args, finetuning_args, training_args.do_train, stage="sft")
+        model_args, finetuning_args, training_args.do_train)
 
     tokenizer.padding_side = "left"  # use left-padding in generation
         
@@ -191,6 +192,7 @@ def main():
         '--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')  # ignored!
     parser.add_argument('--steering_dataset', default='refusal_test')
+    parser.add_argument('--adapter_name_or_path', type=str, default=None)
     parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--rep_token', default=-1)
@@ -235,6 +237,7 @@ def main():
     input_args = {
         "stage": "sft",
         "model_name_or_path": cmd_args.model_name_or_path,
+        "adapter_name_or_path": cmd_args.adapter_name_or_path,
         "do_train": False,
         "template": "llama2chatsimple",
         'dataset_dir': cmd_args.dataset_dir,

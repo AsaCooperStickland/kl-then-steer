@@ -10,16 +10,16 @@ base_path=/scratch/alc9734/latent-adversarial-training/results ;
 
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b ; done;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering ; done;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b steering ; done;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering ; done;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b steering ; done;
 # for m in ${base_path}/run2_persuasion_0.5 ; do sbatch submit_mt.sh $m persuasion_0.5 ; done;
-# for m in ${base_path}/run2_persuasion_0.5 ; do sbatch submit_mt.sh $m persuasion_0.5 steering ; done;
-# for m in ${base_path}/run2_no_steer ; do sbatch submit_mt.sh $m no_steer ; done;
+for m in ${base_path}/run2_persuasion_0.5 ; do sbatch submit_mt.sh $m persuasion_0.5 steering ; done;
+for m in ${base_path}/run2_no_steer ; do sbatch submit_mt.sh $m no_steer steering ; done;
 
-for f in 0.125 0.25 0.5 ; do
+# for f in 0.125 0.25 0.5 ; do
 # for m in ${base_path}/run2_working_concepts_${f} ; do sbatch submit_mt.sh $m working_concepts_${f} ; done;
 # for m in ${base_path}/run2_persuasion_working_concepts_${f} ; do sbatch submit_mt.sh $m persuasion_working_concepts_${f} ; done;
-for m in ${base_path}/run2_working_concepts_${f} ; do sbatch submit_mt.sh $m working_concepts_${f} steering ; done;
-for m in ${base_path}/run2_persuasion_working_concepts_${f} ; do sbatch submit_mt.sh $m persuasion_working_concepts_${f} steering ; done;
+# for m in ${base_path}/run2_working_concepts_${f} ; do sbatch submit_mt.sh $m working_concepts_${f} steering ; done;
+# for m in ${base_path}/run2_persuasion_working_concepts_${f} ; do sbatch submit_mt.sh $m persuasion_working_concepts_${f} steering ; done;
 # for m in ${base_path}/run2_working_concepts_${f}_buffer_30/checkpoint-12000 ; do for e in refusal ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/datasets/ big ; done; done ;
-done
+# done

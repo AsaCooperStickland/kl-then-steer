@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--num_train_epochs', type=int, default=1)
     parser.add_argument('--samples_dir', default='/scratch/alc9734/latent-adversarial-training/samples')
     parser.add_argument('--samples_freq', default=8000, type=int)  # measured in training steps
+    parser.add_argument('--batch_size', default=2, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--buffer_size', type=int, default=0)
@@ -86,12 +87,12 @@ def main():
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
-        "per_device_train_batch_size": 2,
+        "per_device_train_batch_size": cmd_args.batch_size,
         "gradient_accumulation_steps": 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 4000,
-        "learning_rate": 5e-5 if cmd_args.stage == "sft" else 1e-5,
+        "learning_rate": 5e-4 if cmd_args.stage == "sft" else 1e-4,
         "reward_model": "starling",
         'reward_model_type': 'starling',
         # "reward_model": "alikhan0100u/Llama-2-7b-oasst-preference-reward-model-adapter",
