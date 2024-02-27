@@ -90,7 +90,7 @@ def main():
         "overwrite_cache": True,
         "per_device_train_batch_size": cmd_args.batch_size,
         # "gradient_accumulation_steps": 4,
-        "gradient_accumulation_steps": 2,
+        "gradient_accumulation_steps": 2 if cmd_args.finetuning_type == "lora" else 4,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 4000,
