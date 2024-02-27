@@ -49,6 +49,7 @@ def main():
     parser.add_argument('--seed', type=int, default=19)
     parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
     parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--deepspeed', type=str, default=None)
     cmd_args = parser.parse_args()
 
     set_random_seed(cmd_args.seed)
@@ -88,7 +89,8 @@ def main():
         # "output_dir": os.path.join('results', datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
         "per_device_train_batch_size": cmd_args.batch_size,
-        "gradient_accumulation_steps": 4,
+        # "gradient_accumulation_steps": 4,
+        "gradient_accumulation_steps": 2,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 4000,
@@ -112,7 +114,7 @@ def main():
         "top_p": 1 if cmd_args.stage == "sft" else 0.9,
         "top_k": 50 if cmd_args.stage == "sft" else 0,
         "length_penalty": 1.0,
-        "deepspeed": "/scratch/alc9734/latent-adversarial-training/ds_config.json",
+        "deepspeed": cmd_args.deepspeed,
         "local_rank": cmd_args.local_rank,
     }
 

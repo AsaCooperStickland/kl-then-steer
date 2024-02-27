@@ -272,12 +272,15 @@ def main():
                                       jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
         grouped_categories_dict = augmenter.get_all_category_keys()
         models = ["run2_persuasion_0.5", "run2_no_steer"]
+        models += ["run2_lora_persuasion_0.5", "run2_lora_no_steer"]
         models += ["llama-2-7b-chat", "llama-2-13b-chat"]
         for steering_fraction in [0.125, 0.25, 0.5]:
             # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
             # models.append(f"run2_working_concepts_{steering_fraction}/checkpoint-12000")
             models.append(f"run2_persuasion_working_concepts_{steering_fraction}")
             models.append(f"run2_working_concepts_{steering_fraction}")
+            models.append(f"run2_lora_persuasion_working_concepts_{steering_fraction}")
+            models.append(f"run2_lora_working_concepts_{steering_fraction}")
 
     test_set_questions_file = "datasets/refusal/augmented_questions.jsonl"
     test_set_questions = set()

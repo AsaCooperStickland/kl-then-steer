@@ -270,6 +270,8 @@ def main():
     custom_args['model_name_or_path'] = input_args['model_name_or_path']
     # output_folder_name = "vanilla_steering"
     directory_or_model_name_or_path = name_to_path[custom_args['model_name_or_path']] if custom_args['model_name_or_path'] in name_to_path else custom_args['model_name_or_path']
+    if cmd_args.adapter_name_or_path is not None:
+        directory_or_model_name_or_path = cmd_args.adapter_name_or_path
     custom_args['results_path'] = directory_or_model_name_or_path
     # custom_args['results_path'] = f"{directory_or_model_name_or_path}/{output_folder_name}"
     os.makedirs(custom_args['results_path'], exist_ok=True)
