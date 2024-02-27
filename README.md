@@ -15,6 +15,8 @@ wandb login
 # provide your wandb API key
 ```
 
+You may also need to convert your old cache `cache.json` to an sqlite database with `scripts/convert_cache.py`.
+
 ## Usage
 ```
 python lat/finetuning/finetune.py [--flash_attn]
