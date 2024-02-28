@@ -106,6 +106,12 @@ class Steering:
 				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_cropped.json")
 			elif dataset_name == 'refusal_data_full_answers':
 				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_full_answers.json")
+			elif dataset_name == 'refusal_data_full_answers_jinja_augmented':
+				data = get_refusal_pairs(data_dir, mode=mode, 
+							 path=f"{data_dir}/refusal_data_full_answers_jinja_augmented.json", augment_bad_answer=True)
+			elif dataset_name == 'refusal_data_A_B_cropped_jinja_augmented':
+				data = get_refusal_pairs(data_dir, mode=mode, 
+							 path=f"{data_dir}/refusal_data_A_B_cropped_jinja_augmented.json", augment_bad_answer=True)
 			elif dataset_name == 'refusal_data_A_B_question_pairs':
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_question_pairs.json")
 			elif dataset_name == 'filtered_questions_style_question_pairs':

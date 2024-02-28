@@ -97,12 +97,15 @@ class AdditionFormatter(Formatter):
 
 
 class QuestionAugmenter:
-    def __init__(self, dataset_path, jailbreaks_path, jinja_directory):
+    def __init__(self, dataset_path, jailbreaks_path, jinja_directory, jinja_subset="test"):
         self.reader = QuestionReader(dataset_path)
         self.dataset_path = dataset_path
         self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
         random.shuffle(self.jinja_files)
-        self.jinja_files = self.jinja_files[:5]
+        if jinja_subset == "test":
+            self.jinja_files = self.jinja_files[:5]
+        else:
+            self.jinja_files = self.jinja_files[5:]
         with open(jailbreaks_path, "r") as f:
             self.jailbreaks = json.load(f)
         self.jailbreaks = [(item["name"], item["prompt"]) for item in self.jailbreaks]
@@ -193,3 +196,34 @@ class QuestionAugmenter:
     def save_mappings(self):
         with open(os.path.join(self.dataset_path, "refusal/question_mappings.json"), "w") as file:
             json.dump(self.mapping, file, indent=4)
+
+
+class RefusalAugmenter:
+    def __init__(self, dataset_path, jinja_directory, jinja_subset="train"):
+        self.dataset_path = dataset_path
+        self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
+        random.shuffle(self.jinja_files)
+        if jinja_subset == "test":
+            self.jinja_files = self.jinja_files[:5]
+        else:
+            self.jinja_files = self.jinja_files[5:]
+        self.jinja_formatter = Formatter()
+
+    def augment_refusal(self, input_filename, output_filename):
+        with open(os.path.join(self.dataset_path, input_filename), "r") as f:
+            refusal_data = json.load(f)
+        
+        new_refusal_data, mapping = self.jinja_formatter.format_questions(self.jinja_files, refusal_data, category="n/a", 
+                                                                 model="n/a", extra_diverse=False, augment_all=False)
+        new_refusal_data_augmented = []
+        for item in new_refusal_data:
+            old_question = mapping[item["question"]]
+            augmented_question = item["question"]
+            item["augmented_question"] = augmented_question
+            item["question"] = old_question
+            new_refusal_data_augmented.append(item)
+        
+        with open(os.path.join(self.dataset_path, output_filename), "w") as f:
+            json.dump(new_refusal_data, f)
+        
+        
