@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from contextlib import nullcontext
 
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.logging import get_logger
@@ -6,8 +7,10 @@ from llmtuner.extras.logging import get_logger
 if TYPE_CHECKING:
     from transformers.trainer import PredictionOutput
 
+import torch.nn.functional as F
 from transformers.modeling_utils import unwrap_model
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
+from trl.core import logprobs_from_logits
 
 from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
 
@@ -20,6 +23,12 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         super().__init__(**kwargs)
         self.custom_args = custom_args
         self.steering = steering
+        self.kl_loss = custom_args["loss_function"] == "kl"
+        self.optional_peft_ctx = (
+            self.accelerator.unwrap_model(self.model).pretrained_model.disable_adapter
+            if (self.training_args.finetuning_type == "lora" and self.kl_loss)
+            else nullcontext
+        )
 
     def compute_loss(self, model, inputs, return_outputs=False):
         """
@@ -34,6 +43,11 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         else:
             labels = None
         outputs = model(**inputs)
+        if self.kl_loss:
+            with self.optional_peft_ctx():
+                original_outputs = model(**inputs)
+                original_logprobs = logprobs_from_logits(original_outputs.logits, None, gather=False)
+                logprobs = logprobs_from_logits(outputs.logits, None, gather=False)
 
         self.steering.reset()
 
@@ -41,8 +55,10 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
-
-        if labels is not None:
+        
+        if self.kl_loss:
+                loss = F.kl_div(original_logprobs, logprobs, log_target=True, reduction="none").sum(-1)
+        elif labels is not None:
             if unwrap_model(model)._get_name() in MODEL_FOR_CAUSAL_LM_MAPPING_NAMES.values():
                 loss = self.label_smoother(outputs, labels, shift_labels=True)
             else:

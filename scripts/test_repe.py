@@ -226,6 +226,8 @@ def main():
         'buffer_size': cmd_args.buffer_size,
         'rep_token': cmd_args.rep_token,
         'direction_method': cmd_args.direction_method,
+        'loss_function': "vanilla",
+        'steering_coeff_range': "positive",
         'samples_freq': cmd_args.samples_freq,
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,

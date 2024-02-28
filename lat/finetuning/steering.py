@@ -134,7 +134,10 @@ class Steering:
 	def sample_coeff(self):
 		c = self.custom_args['steering_coeff']
 		# sample a range between 0 and 1
-		c = c * random.uniform(0, 1)
+		if self.custom_args['steering_coeff_range'] == "positive":
+			c = c * random.uniform(0, 1)
+		else:
+			c = c * random.uniform(-1, 1)
 		# c is only nonzero with probability given by steering_probability
 		if random.random() < self.custom_args['steering_probability']:
 			return c
