@@ -147,8 +147,8 @@ def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False,
 		neg_answer = item[negative_key].strip()
 		pos_example = (question, pos_answer)
 		if augment_bad_answer:
-			assert "augmented question" in item, "augment_bad_answer requires augmented question"
-			question = item["augmented question"]
+			assert "augmented_question" in item, "augment_bad_answer requires augmented question"
+			question = item["augmented_question"]
 		neg_example = (question, neg_answer)
 		c_e.append(neg_example)
 		o_e.append(pos_example)

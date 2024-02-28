@@ -74,8 +74,10 @@ class Formatter:
             category_key += "_extra_diverse" if extra_diverse else ""
             for item in questions[start_index:end_index]:
                 augmented_question = self.format_example(template_prompt, item["question"])
-                formatted_questions.append({"question": augmented_question, "category": category_key})
                 mappings[augmented_question] = item["question"]
+                item["question"] = augmented_question
+                item["category"] = category_key
+                formatted_questions.append(item)
         return formatted_questions, mappings
 
     def get_category_keys(self, templates, category, model, extra_diverse=False):
@@ -217,7 +219,9 @@ class RefusalAugmenter:
                                                                  model="n/a", extra_diverse=False, augment_all=False)
         new_refusal_data_augmented = []
         for item in new_refusal_data:
+            print(item["question"], "question")
             old_question = mapping[item["question"]]
+            print(old_question, "old question")
             augmented_question = item["question"]
             item["augmented_question"] = augmented_question
             item["question"] = old_question
