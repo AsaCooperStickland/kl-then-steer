@@ -1,5 +1,4 @@
 from transformers import DataCollatorForSeq2Seq
-from lat.data.preprocess import preprocess_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.extras.misc import get_logits_processor
 
@@ -27,8 +26,8 @@ class SamplesCallback(TrainerCallback):
 		self.num_return_sequences = custom_args['num_return_sequences']
 		self.prev_sampling_step_indices = set()
 
-		train_dataset = preprocess_dataset(train_dataset, tokenizer, data_args, training_args, stage="sft")
-		eval_dataset = preprocess_dataset(eval_dataset, tokenizer, data_args, training_args, stage="sft")
+		# train_dataset = preprocess_dataset(train_dataset, tokenizer, data_args, training_args, stage="sft")
+		# eval_dataset = preprocess_dataset(eval_dataset, tokenizer, data_args, training_args, stage="sft")
 
 		data_collator = DataCollatorForSeq2Seq(
 			tokenizer=tokenizer,
