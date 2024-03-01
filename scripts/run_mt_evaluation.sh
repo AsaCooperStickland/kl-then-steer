@@ -26,7 +26,8 @@ base_path=/scratch/alc9734/latent-adversarial-training/results ;
 # done
 
 # for l in run2_lora_no_steer run2_lora_persuasion_0.5 run2_lora_persuasion_working_concepts_0.5 run2_lora_working_concepts_0.5 ; do
-for l in  run2_ppo_no_steer_lr1e-4 ; do
+# for l in  run2_ppo_no_steer_lr1e-4 ; do
+for l in run2_lora_persuasion_0.5_noisytune ; do
 for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do
   sbatch submit_mt.sh $m $l lora ${base_path}/${l};
   done

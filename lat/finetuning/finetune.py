@@ -42,7 +42,9 @@ def main():
     parser.add_argument('--buffer_size', type=int, default=0)
     parser.add_argument('--rep_token', default=-1)
     parser.add_argument('--direction_method', default='pca', choices=['random', 'pca', 'cluster_mean'])
+    parser.add_argument('--loss_function', default='vanilla', choices=['vanilla', 'kl'])
     parser.add_argument('--steering_coeff', type=float, default=None)
+    parser.add_argument('--steering_coeff_range', type=str, default='positive', choices=['positive', 'both'])
     parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
@@ -70,7 +72,9 @@ def main():
         'run_name': cmd_args.run_name,
         'rep_token': cmd_args.rep_token,
         'direction_method': cmd_args.direction_method,
+        'loss_function': cmd_args.loss_function,
         'steering_probability': cmd_args.steering_probability,
+        'steering_coeff_range': cmd_args.steering_coeff_range,
         'subsample_steering_data': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }
