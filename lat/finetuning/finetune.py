@@ -47,6 +47,7 @@ def main():
     parser.add_argument('--steering_coeff_range', type=str, default='positive', choices=['positive', 'both'])
     parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
+    parser.add_argument('--optimize_steering', action='store_true') #TODO this should take choices if we implement multiple optimization functions
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
     parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
@@ -66,6 +67,7 @@ def main():
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
         'do_steer': cmd_args.do_steer,
+        'optimize_steering': cmd_args.optimize_steering,
         'samples_dir': cmd_args.samples_dir,
         'samples_freq': cmd_args.samples_freq,
         'buffer_size': cmd_args.buffer_size,
