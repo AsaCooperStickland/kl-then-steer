@@ -51,13 +51,12 @@ def generate_target_string(question, no_refuse_LM, no_refuse_tokenizer, target_t
     target_string = no_refuse_tokenizer.decode(out[0][len(tensor_in[0]):])
     return target_string
 
-def get_evolutionary_optimizer(model, tokenizer, weight_percentage=0.5, max_length=None):
+def get_evolutionary_optimizer(model, tokenizer, weight_percentage=0.5,):
 	evolutionary_prompt = f"""Generate a new text which is similar to the two given texts. Your prompt should be {100*weight_percentage}% more similar to the first text and {100-100*weight_percentage}% similar to the second text.\n Enclose your new text in dollars symbols i.e. $YOUR NEW TEXT HERE$."""
 	def evolve_text_pairs(text_parents_pair):
 		tokens1 = tokenizer(text_parents_pair[0], return_tensors="pt", add_special_tokens=False)
 		tokens2 = tokenizer(text_parents_pair[1], return_tensors="pt", add_special_tokens=False)
-		if max_length is None:
-			max_length = max(len(tokens1.input_ids[0]), len(tokens2.input_ids[0]))*1.25 #1.25 is arbitrary to allow for some increase in length following mutation
+		max_length = max(len(tokens1.input_ids[0]), len(tokens2.input_ids[0]))*1.25 #1.25 is arbitrary to allow for some increase in length following mutation
 		query = evolutionary_prompt+f"\nText 1 is ${text_parents_pair[0]}$\nText 2 is ${text_parents_pair[1]}$"
 		generation = generate_target_string(query, model, tokenizer, target_tokens=max_length)
 		if generation.count('$')>=2:
@@ -76,7 +75,8 @@ def get_evolutionary_optimizer(model, tokenizer, weight_percentage=0.5, max_leng
 
 
 class Steering:
-	def __init__(self, dataset_name, model_arg, tokenizer_arg, data_dir, custom_args, optimize_steering=False):
+	def __init__(self, dataset_name, model_arg, tokenizer_arg, data_dir, custom_args, 
+			  optimizer=None, expunge=True, preserve_categories=True, n_new=None, optimizer_frequency=None):
 		self.custom_args = custom_args
 		self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
 
@@ -106,17 +106,12 @@ class Steering:
 		if custom_args["buffer_size"] > 0:
 			self.directions_buffer = {}
 
-		self.optimize_steering = optimize_steering
-		if self.optimize_steering:
+		self.optimizer = optimizer #get_evolutionary_optimizer(hermes, hermes_tokenizer, weight_percentage=0.5, max_length=None)
+		if self.optimizer:
 			self.steering_log = dict()
-			#TODO the below should all be set in init args
 			self.optimizer_steps = 0
-			self.n_new = None
-			self.optimizer_frequency = None
-			self.expunge = None #True
-			hermes = None #TODO
-			hermes_tokenizer = None #TODO
-			self.optimizer = get_evolutionary_optimizer(hermes, hermes_tokenizer, weight_percentage=0.5, max_length=None)
+			self.expunge = expunge
+			self.preserve_categories = preserve_categories
 		if self.custom_args["buffer_size"] > 0 and self.optimize_steering:
 			raise NotImplementedError("Buffer size and optimize vectors are not compatible.")
 
@@ -167,6 +162,16 @@ class Steering:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
 			data = preprocess_steering_data(data)
 			datasets.append(data)
+		
+		if self.optimizer:
+			if n_new:
+					self.n_new = n_new
+			else:
+				self.n_new = 0.01*sum([len(cat) for cat in data.values()])
+			if optimizer_frequency:
+				self.optimizer_frequency = optimizer_frequency
+			else:
+				self.optimizer_frequency = None #Will be determined within do_optimize
 		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
 
@@ -299,14 +304,15 @@ class Steering:
 			self.steering_log[first]['losses'].append(loss)
 			self.steering_log[second]['losses'].append(loss)
 		
-	def do_optimize(self, preserve_categories=True):
+	def do_optimize(self,):
 		'''
 		:param new: Number of new pairs to generate and expunge (if expunge=True)
 		:param frequency: How often to optimize the steering vectors, None for every step
 		TODO maybe frequency and new should be set in the trainer as a function of dataset size and number of steps
 		'''
 		self.optimizer_steps += 1
-		if self.optimizer_steps % self.optimizer_frequency != 0:
+		if (self.optimizer_frequency and self.optimizer_steps % self.optimizer_frequency != 0) or (
+			not self.optimizer_frequency and len(self.steering_log)<10*self.n_new):
 			return
 
 		for _, data in self.steering_log.items():
@@ -344,7 +350,7 @@ class Steering:
 
 		random.shuffle(highest_loss_text)  # Shuffle for random pairing
 
-		if preserve_categories:
+		if self.preserve_categories:
 			by_category_label = {}
 			for entry in highest_loss_text:
 				category = entry[1]['category']
