@@ -2,15 +2,19 @@
 
 from typing import TYPE_CHECKING, Optional, List
 from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
+from peft import PeftModel
 
 from llmtuner.data import split_dataset
 from lat.data.loader import get_dataset
 from llmtuner.extras.constants import IGNORE_INDEX
 from llmtuner.model import load_model_and_tokenizer
 from llmtuner.train.sft.metric import ComputeMetrics
+
 from trainer import SteeringTrainer
 
 from transformers import TrainerCallback
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers.integrations import is_deepspeed_zero3_enabled
 import torch
 from datetime import datetime
 from steering import Steering
@@ -53,6 +57,23 @@ def run_sft(
 	    )
     )
     model = model.to(torch.bfloat16)
+    if custom_args["loss_function"] == "kl" and not isinstance(model, PeftModel):
+        config_kwargs = {
+	        "trust_remote_code": True,
+	        "cache_dir": model_args.cache_dir,
+	        "revision": model_args.model_revision,
+	        "token": model_args.hf_hub_token,
+	            }
+        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+        ref_model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path,
+            config=config,
+            torch_dtype=model_args.compute_dtype,
+            low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
+            device_map="cuda:1",
+            **config_kwargs,)
+        ref_model.to(torch.bfloat16)
+    else:
+        ref_model = None
     if custom_args['do_steer']:
         steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
         print(f"Steering dataset: '{custom_args['steering_dataset']}' found at: {custom_args['steering_data_path']}")
@@ -66,6 +87,7 @@ def run_sft(
 			custom_args=custom_args,
 			steering=steering,
 			model=model,
+            ref_model=ref_model,
 			args=training_args,
 			tokenizer=tokenizer,
 			data_collator=data_collator,

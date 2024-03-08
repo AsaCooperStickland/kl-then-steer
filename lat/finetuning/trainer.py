@@ -20,10 +20,11 @@ logger = get_logger(__name__)
 
 
 class SteeringTrainer(CustomSeq2SeqTrainer):
-    def __init__(self, custom_args, steering, **kwargs):
+    def __init__(self, ref_model, custom_args, steering, **kwargs):
         super().__init__(**kwargs)
         self.custom_args = custom_args
         self.steering = steering
+        self.ref_model = ref_model
         self.kl_loss = custom_args["loss_function"] == "kl"
         print(self.model)
         print(self.accelerator.unwrap_model(self.model))
@@ -50,11 +51,15 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         self.steering.reset()
         if self.kl_loss:
             logprobs = logprobs_from_logits(outputs.logits, None, gather=False)
-            model.eval()
-            with self.optional_peft_ctx():
-                original_outputs = model(**inputs)
+            if self.ref_model:
+                original_outputs = self.ref_model(**inputs)
                 original_logprobs = logprobs_from_logits(original_outputs.logits, None, gather=False)
-            model.train()
+            else:
+                model.eval()
+                with self.optional_peft_ctx():
+                    original_outputs = model(**inputs)
+                    original_logprobs = logprobs_from_logits(original_outputs.logits, None, gather=False)
+                model.train()
 
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
