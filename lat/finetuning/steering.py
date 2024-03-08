@@ -5,6 +5,7 @@ import os
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
+from trl import AutoModelForCausalLMWithValueHead
 
 from lat.finetuning.steering_data import *
 
@@ -45,7 +46,11 @@ def preprocess_steering_data(data):
 class Steering:
 	def __init__(self, dataset_name, model_arg, tokenizer_arg, data_dir, custom_args):
 		self.custom_args = custom_args
-		self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
+		if isinstance(model_arg, AutoModelForCausalLMWithValueHead):
+			self.model = model_arg.pretrained_model.model if custom_args['finetuning_type'] == 'lora' else model_arg.pretrained_model
+			print(self.model)
+		else:
+			self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
 
 		# self.tokenizer = tokenizer
 		config_kwargs = {'trust_remote_code': True, 'cache_dir': None, 'revision': 'main', 'token': None}
@@ -125,6 +130,7 @@ class Steering:
 
 		self.layer_id = list(range(-11, -30, -1))
 		self.block_name = "decoder_block"
+		self.token_pos = custom_args['token_pos']
 
 		self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model, self.tokenizer)
 		self.wrapped_model.unwrap()
@@ -230,7 +236,7 @@ class Steering:
 		self.wrapped_model.reset()
 		for key in activations:
 			activations[key] = activations[key].to(torch.bfloat16)
-		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name)
+		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos)
 		self.wrapped_model.to(torch.bfloat16)
 
 	def reset(self):
