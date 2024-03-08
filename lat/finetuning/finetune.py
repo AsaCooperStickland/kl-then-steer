@@ -29,12 +29,12 @@ def main():
     parser.add_argument('--flash_attn', action='store_true')
     parser.add_argument('--stage', default='sft', choices=['sft', 'ppo'])
     parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
-    parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
-    parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
+    parser.add_argument('--steering_data_path', default="/scratch/jp6263/latent-adversarial-training/datasets")
+    parser.add_argument('--dataset_dir', default='/scratch/jp6263/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=1)
-    parser.add_argument('--samples_dir', default='/scratch/alc9734/latent-adversarial-training/samples')
+    parser.add_argument('--samples_dir', default='/scratch/jp6263/latent-adversarial-training/samples')
     parser.add_argument('--samples_freq', default=8000, type=int)  # measured in training steps
     parser.add_argument('--batch_size', default=2, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--steering_coeff_range', type=str, default='positive', choices=['positive', 'both'])
     parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
-    parser.add_argument('--optimize_steering', action='store_true') #TODO this should take choices if we implement multiple optimization functions
+    parser.add_argument('--optimize_steering', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
     parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
