@@ -30,6 +30,8 @@ def prompt_format(instruction, template="llama2chatsimple"):
         B_SYS, E_SYS = "<|im_start|>system\n", "<|im_end|>\n"
         dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
         dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+    else:
+        raise ValueError
         
     return dialog_content
 

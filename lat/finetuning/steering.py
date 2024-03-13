@@ -24,9 +24,17 @@ def create_labels(data):
 	data = [prompt for pair in data for prompt in pair]
 	return {'data': data, 'labels': train_labels}
 
-def preprocess_steering_data(data):
-	user_tag = "[INST]"
-	assistant_tag = "[/INST]"
+def preprocess_steering_data(data, template="llama2chatsimple"):
+	assert template in ["llama2chatsimple", "chatml"]
+	if template == "llama2chatsimple":
+		user_tag = "[INST]"
+		assistant_tag = "[/INST]"
+	elif template == "chatml":
+		user_tag = "<|im_start|>user\n"
+		assistant_tag = "<|im_end|>\n<|im_start|>assistant\n"
+	else:
+		raise ValueError
+		
 	output_data = {}
 	for category, pairs in data.items():
 		pairs = [[f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}' for user_prompt, assistant_prompt in pair]
@@ -131,6 +139,7 @@ class Steering:
 		self.layer_id = list(range(-11, -30, -1))
 		self.block_name = "decoder_block"
 		self.token_pos = custom_args['token_pos']
+		self.normalize = custom_args['normalize']
 
 		self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model, self.tokenizer)
 		self.wrapped_model.unwrap()
@@ -236,7 +245,7 @@ class Steering:
 		self.wrapped_model.reset()
 		for key in activations:
 			activations[key] = activations[key].to(torch.bfloat16)
-		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos)
+		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos, normalize=self.normalize)
 		self.wrapped_model.to(torch.bfloat16)
 
 	def reset(self):

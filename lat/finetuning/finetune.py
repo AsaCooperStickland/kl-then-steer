@@ -79,6 +79,7 @@ def main():
         'steering_coeff_range': cmd_args.steering_coeff_range,
         'subsample_steering_data': False,
         'token_pos': cmd_args.token_pos,
+        'normalize': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }
     
@@ -99,7 +100,9 @@ def main():
         # "dataset": "alpaca_gpt4_en",
         "dataset": cmd_args.dataset,
         "finetuning_type": cmd_args.finetuning_type,
-        "lora_target": "q_proj,v_proj",
+        "lora_target": "q_proj,v_proj,w_out,w_in",
+        # "use_rslora": True,
+        "lora_rank": 128,
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
