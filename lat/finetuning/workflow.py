@@ -69,9 +69,10 @@ def run_sft(
             config=config,
             torch_dtype=model_args.compute_dtype,
             low_cpu_mem_usage=(not is_deepspeed_zero3_enabled()),
-            device_map="cuda:1",
+            # device_map="cuda:1",
             **config_kwargs,)
         ref_model.to(torch.bfloat16)
+        ref_model.eval()
     else:
         ref_model = None
     if custom_args['do_steer']:
