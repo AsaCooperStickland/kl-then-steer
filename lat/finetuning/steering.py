@@ -59,6 +59,8 @@ class Steering:
 			print(self.model)
 		else:
 			self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
+		if custom_args['merge_adapter']:
+			self.model = model_arg
 
 		# self.tokenizer = tokenizer
 		config_kwargs = {'trust_remote_code': True, 'cache_dir': None, 'revision': 'main', 'token': None}
@@ -131,7 +133,7 @@ class Steering:
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/filtered_questions_style_question_pairs.json")
 			else:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
-			data = preprocess_steering_data(data)
+			data = preprocess_steering_data(data) # add template
 			datasets.append(data)
 		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets

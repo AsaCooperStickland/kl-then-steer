@@ -65,6 +65,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             answers = existing_results[multiplier]
             # filter question is for existing answers
             existing_questions = set([a["question"] for a in answers])
+            print(f"Found {len(existing_questions)} existing answers")
             # delete any questions without the correct steering key
             for a in answers:
                 if "vector_type" not in a:
@@ -72,6 +73,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                 if a["vector_type"] != trainer.steering.repe_key:
                     answers.remove(a)
             new_questions = [q for q in questions if q["question"] not in existing_questions]
+            print(f"Generating for {len(new_questions)} new questions")
         else:
             new_questions = deepcopy(questions)
 
@@ -123,7 +125,6 @@ def run_generation(
 ):
     model, tokenizer = load_model_and_tokenizer(
         model_args, finetuning_args, training_args.do_train)
-
     tokenizer.padding_side = "left"  # use left-padding in generation
         
     questions = []
@@ -147,6 +148,7 @@ def run_generation(
         model=model,
         steering=steering,
         args=training_args,
+        ref_model=None,
         custom_args=custom_args,
         tokenizer=tokenizer,
         callbacks=callbacks,
@@ -193,6 +195,7 @@ def main():
     parser.add_argument('--dataset', default='training_0')  # ignored!
     parser.add_argument('--steering_dataset', default='refusal_test')
     parser.add_argument('--adapter_name_or_path', type=str, default=None)
+    parser.add_argument('--template', type=str, default='llama2chatsimple')
     parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--rep_token', default=-1)
@@ -216,6 +219,7 @@ def main():
     for size in model_sizes:
         name_to_path[f'/vast/work/public/ml-datasets/llama-2/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
         name_to_path[f'meta-llama/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
+    name_to_path["NousResearch/Nous-Hermes-2-Mistral-7B-DPO"] = f"{cmd_args.output_dir}/hermes-2-mistral-7b-dpo"
                     
     custom_args = {
         "base_directory": cmd_args.base_directory,
@@ -225,6 +229,8 @@ def main():
         'samples_dir': cmd_args.samples_dir,
         'buffer_size': cmd_args.buffer_size,
         'rep_token': cmd_args.rep_token,
+        'token_pos': None,
+        'normalize': False,
         'direction_method': cmd_args.direction_method,
         'loss_function': "vanilla",
         'steering_coeff_range': "positive",
@@ -234,6 +240,7 @@ def main():
         'subsample_steering_data': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
         "overwrite_results": cmd_args.overwrite_results,
+        "merge_adapter": cmd_args.finetuning_type == "lora",
     }
 
     input_args = {
@@ -241,7 +248,7 @@ def main():
         "model_name_or_path": cmd_args.model_name_or_path,
         "adapter_name_or_path": cmd_args.adapter_name_or_path,
         "do_train": False,
-        "template": "llama2chatsimple",
+        "template": cmd_args.template,
         'dataset_dir': cmd_args.dataset_dir,
         "dataset": cmd_args.dataset,
         "finetuning_type": cmd_args.finetuning_type,
@@ -274,6 +281,8 @@ def main():
     directory_or_model_name_or_path = name_to_path[custom_args['model_name_or_path']] if custom_args['model_name_or_path'] in name_to_path else custom_args['model_name_or_path']
     if cmd_args.adapter_name_or_path is not None:
         directory_or_model_name_or_path = cmd_args.adapter_name_or_path
+    if custom_args["merge_adapter"]:
+        directory_or_model_name_or_path = f"{directory_or_model_name_or_path}/merged"
     custom_args['results_path'] = directory_or_model_name_or_path
     # custom_args['results_path'] = f"{directory_or_model_name_or_path}/{output_folder_name}"
     os.makedirs(custom_args['results_path'], exist_ok=True)

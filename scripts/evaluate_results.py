@@ -35,7 +35,7 @@ def remove_repeated_letters(input_string):
 
 def categorize_results(results, classifier_prompt, model_name, call_type, 
                        directory, question_type, evaluate_multiplier=None,
-                       use_existing=True, test_set_questions=None, strict_categories=None):
+                       use_existing=True, test_set_questions=None, strict_categories=None, verbose=False):
     """Categorizes the results using the classifier and stores them as JSON."""
     # categorized_results_file = f"{directory}/{question_type}_categorized_results.json"
     model_name_suffix = "" if model_name == "gpt-4-0125-preview" else f"_{model_name}"
@@ -55,14 +55,20 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
             if str(multiplier) != str(evaluate_multiplier):
                 print(f"Skipping multiplier {multiplier}")
                 continue
+        potential_questions = set([entry["question"] for entry in multiplier_data["answers"]])
+        print(f"Potential questions for multiplier {multiplier}: {len(potential_questions)}")
         multiplier_key = f"multiplier_{multiplier}"
         existing_results = categorized_data.get(
             multiplier_key, [])
+        
         existing_questions = [entry["question"] for entry in existing_results]
         print(f"Existing questions for multiplier {multiplier}: {len(existing_questions)}")
         for ans in multiplier_data["answers"]:
             if ans["question"] in existing_questions:
                 continue
+            if test_set_questions:
+                if ans["question"] not in test_set_questions:
+                    continue
             if strict_categories:
                 if ans["category"] not in strict_categories:
                     continue
@@ -126,7 +132,7 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
     # make sure potential questions is a superset of test_set_questions
     if test_set_questions:
         categorized_data = filter_categorized_data(categorized_data, test_set_questions, multiplier=evaluate_multiplier,
-                                                   strict_categories=strict_categories)
+                                                   strict_categories=strict_categories, verbose=verbose)
 
     return categorized_data
 
@@ -142,8 +148,8 @@ def filter_categorized_data(categorized_data, test_set_questions, multiplier=0.0
         if verbose:
             print(f"Test set questions: {len(test_set_questions)}")
             print(f"Potential questions: {len(potential_questions)}")
-            print(f"Example questions: {list(test_set_questions)[:5]}")
-            print(f"Example potential questions: {list(potential_questions)[:5]}")
+            print(f"Example questions: {list(test_set_questions)[:1]}")
+            print(f"Example potential questions: {list(potential_questions)[:1]}")
             print("Warning! Test set questions are not a subset of potential questions.")
     if verbose:
         print(f"Potential questions: {len(potential_questions)}")
@@ -235,7 +241,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
                 #         csv += f"{multiplier_data['n/a'][category]},,,"
                 #         break
                 # use 2 decimal places
-                csv += f"{multiplier_data[vec_name].get(category, 0):.2f},"
+                csv += f"{multiplier_data[vec_name].get(category, 0):.3f},"
         csv += "\n"
     return csv.strip()
 
@@ -257,6 +263,9 @@ def main():
     else:
         strict_categories = None
         evaluated_multipliers = [-2.0, -1.5, 0.0, 1.5, 2.0]
+        evaluated_multipliers = [-1.0, 1.0]
+        # evaluated_multipliers = [0.0]
+        # evaluated_multipliers = [1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
     # models = ["run_no_steer_full/checkpoint-1000", "run_persuasion_0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
     # models += ["run_2/checkpoint-4000", "run_no_steer_full/checkpoint-4000", "run_persuasion_0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"]
@@ -271,23 +280,34 @@ def main():
                                       jailbreaks_path=jailbreaks_path,
                                       jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
         grouped_categories_dict = augmenter.get_all_category_keys()
-        models = ["run2_persuasion_0.5", "run2_no_steer"]
-        models += ["run2_lora_persuasion_0.5", "run2_lora_no_steer"]
-        models += ["llama-2-7b-chat", "llama-2-13b-chat"]
-        for steering_fraction in [0.125, 0.25, 0.5]:
-            # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
-            # models.append(f"run2_working_concepts_{steering_fraction}/checkpoint-12000")
-            models.append(f"run2_persuasion_working_concepts_{steering_fraction}")
-            models.append(f"run2_working_concepts_{steering_fraction}")
-            models.append(f"run2_lora_persuasion_working_concepts_{steering_fraction}")
-            models.append(f"run2_lora_working_concepts_{steering_fraction}")
+        models = []
+        # models = ["run2_persuasion_0.5", "run2_no_steer"]
+        # models += ["run2_lora_persuasion_0.5", "run2_lora_no_steer", "run2_ppo_no_steer"]
+        # models += ["run2_lora_persuasion_0.5_noisytune", "run2_lora_persuasion_0.5", "run2_lora_no_steer"]
+        # models += ["run2_ppo_no_steer", "run2_lora_kl_large_scale_concept_0.5", "run2_lora_large_scale_concept_0.5"]
+        # models = ["run2_lora_persuasion_0.5_noisytune", "run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
+        # models += ["llama-2-7b-chat", "llama-2-13b-chat"]
+        models += ["llama-2-7b-chat"]
+        models += ["run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
+        # for steering_fraction in [0.125, 0.25, 0.5]:
+        # for steering_fraction in [0.5]:
+        #     # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
+        #     # models.append(f"run2_working_concepts_{steering_fraction}/checkpoint-12000")
+        #     models.append(f"run2_persuasion_working_concepts_{steering_fraction}")
+        #     models.append(f"run2_working_concepts_{steering_fraction}")
+        #     models.append(f"run2_lora_persuasion_working_concepts_{steering_fraction}")
+        #     models.append(f"run2_lora_working_concepts_{steering_fraction}")
+        #     models.append(f"run2_lora_large_scale_concept_{steering_fraction}")
 
     test_set_questions_file = "datasets/refusal/augmented_questions.jsonl"
     test_set_questions = set()
     with jsonlines.open(test_set_questions_file) as reader:
+        duplicates = 0
         for item in reader:
             if 'question' in item:
                 formatted_question = prompt_format(item["question"])
+                if formatted_question in test_set_questions:
+                    duplicates += 1
                 test_set_questions.add(formatted_question)
 
     for path_idx, model in enumerate(models):
@@ -306,15 +326,17 @@ def main():
                 # question_types = ["refusal"]
                 # question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
                 question_types = "refusal_data_A_B_cropped refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers refusal_data_full_answers_jinja_augmented refusal_data_A_B_question_pairs filtered_questions_style_question_pairs".split(" ")
-            # all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
+                # question_types = "refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented".split(" ")
             all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             # question_types = ["vanilla_"]
             for i, results_type in enumerate(all_question_types):
+                # print(f"Startle Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if i != 0 and evaluated_multiplier == 0.0:
-                    continue
-                if evaluated_multiplier == 1.5 and "working" not in model_path:
-                    continue
+                    continue    
+                # if evaluated_multiplier == 1.5 and "working" not in model_path:
+                #     continue
                 results_location = f"{directory}/{results_type}_results.json"
+                # print(f"ResultsFun {results_type} from model {model} with multiplier {evaluated_multiplier}.{results_location}")
                 if os.path.exists(results_location):
                     results = json.load(
                         open(f"{directory}/{results_type}_results.json", "r"))
@@ -322,22 +344,25 @@ def main():
                     if verbose:
                         print(f"Results for {results_type} from model {results_location} not found.")
                     continue
+                # print(f"ResultsFinishLoading {results_type} from model {model} with multiplier {evaluated_multiplier}.{results_location}")
                 with open("lat/evaluation_prompt.txt", "r") as f:
                     classifier_prompt = f.read()
                 model_name = "gpt-3.5-turbo-1106" # "gpt-4-0125-preview" #"gpt-3.5-turbo-16k-0613"
                 call_type = "sample"  # or "logprobs"
                 model_name_suffix = "" if model_name == "gpt-4-0125-preview" else f"_{model_name}"
                 categorized_results_file = f"{directory}/{results_type}_categorized_results{model_name_suffix}.json"
+                # print(f"Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if overwrite or not os.path.exists(categorized_results_file):
                     categorized_results = categorize_results(
                         results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_multiplier=evaluated_multiplier,
-                        strict_categories=strict_categories, test_set_questions=test_set_questions)
+                        strict_categories=strict_categories, test_set_questions=test_set_questions, verbose=args.verbose)
                 else:
                     with open(categorized_results_file, "r") as f:
+                        # print(categorized_results_file)
                         categorized_results = json.load(f)
+                    
                     categorized_results = filter_categorized_data(categorized_results, test_set_questions, multiplier=evaluated_multiplier,
-                                                                  strict_categories=strict_categories)
-                # print(categorized_results)
+                                                                  strict_categories=strict_categories, verbose=args.verbose)
                 average_scores = get_average_scores_json(categorized_results, grouped_categories_dict, multiplier=evaluated_multiplier)
                 # print(average_scores)
                 jail_break_type = results_type
@@ -347,6 +372,7 @@ def main():
                     grouped_categories_dict=grouped_categories_dict, print_header=(path_idx==0 and i==0), model_name=model)
                 # print(f"Results for {results_type} from model {path}:")
                 print(csv_scores)
+                # print(f"Finish Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
 
 
 if __name__ == "__main__":
