@@ -241,7 +241,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
                 #         csv += f"{multiplier_data['n/a'][category]},,,"
                 #         break
                 # use 2 decimal places
-                csv += f"{multiplier_data[vec_name].get(category, 0):.3f},"
+                csv += f"{multiplier_data[vec_name].get(category, 0):.2f},"
         csv += "\n"
     return csv.strip()
 
@@ -263,7 +263,7 @@ def main():
     else:
         strict_categories = None
         evaluated_multipliers = [-2.0, -1.5, 0.0, 1.5, 2.0]
-        evaluated_multipliers = [-1.0, 1.0]
+        evaluated_multipliers = [-1.5, -1.0, 0.0, 1.0, 1.5]
         # evaluated_multipliers = [0.0]
         # evaluated_multipliers = [1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -289,6 +289,9 @@ def main():
         # models += ["llama-2-7b-chat", "llama-2-13b-chat"]
         models += ["llama-2-7b-chat"]
         models += ["run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
+        models += ["run2_lora_kl_lr_1e-5_working_concepts_0.125", "run2_lora_kl_lr_5e-5_working_concepts_0.125"]
+        models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125"]
+        models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.5", "run2_lora_kl_lr_5e-5_large_scale_concept_0.5"]
         # for steering_fraction in [0.125, 0.25, 0.5]:
         # for steering_fraction in [0.5]:
         #     # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
@@ -313,7 +316,10 @@ def main():
     for path_idx, model in enumerate(models):
         for evaluated_multiplier in evaluated_multipliers:
             model_path = f"{path}/{model}"
-            directory = f"{model_path}"
+            if "lora" in model or "ppo" in model:
+                directory = f"{model_path}/merged"
+            else:
+                directory = f"{model_path}"
             # directory = f"{model_path}/vanilla_steering"
             # "4chan_", "vanilla_4chan_", "aligned_", "vanilla_aligned_", "confidant_", "vanilla_confidant_", "machiavelli_", "vanilla_machiavelli_"]
             jail_breaks = [""] # , "_4chan", "_aligned", "_confidant", "_machiavelli"]
