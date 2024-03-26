@@ -116,7 +116,7 @@ def main(args):
                 print(f"Persuasion fraction: {new_persuasion_fraction:.2f}")
                 persuasion_data = persuasion_data[:num_persuasion]
                 refusal_data = refusal_data[num_persuasion:]
-                for refusal_proportion in [0.1, 0.2, 0.3, 0.4, 0.5]:
+                for refusal_proportion in [0.125, 0.25, 0.5]:
                     output_file_path = f"lat/finetuning/finetuning_data/training_persuasion{new_persuasion_fraction:.2f}_refusal{refusal_proportion:.2f}.json"
                     non_refusal_data = [d for d in data if not check_source_for_refusal(d["source"])]
                     print(f"Dataset proportions before filtering: {len(non_refusal_data)} non-refusal, {len(refusal_data)} refusal, {len(persuasion_data)} persuasion")

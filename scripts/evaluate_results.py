@@ -33,13 +33,18 @@ def remove_repeated_letters(input_string):
         return False, input_string
     
 
-def categorize_results(results, classifier_prompt, model_name, call_type, 
+def categorize_results(args, results, classifier_prompt, model_name, call_type, 
                        directory, question_type, evaluate_multiplier=None,
                        use_existing=True, test_set_questions=None, strict_categories=None, verbose=False):
     """Categorizes the results using the classifier and stores them as JSON."""
     # categorized_results_file = f"{directory}/{question_type}_categorized_results.json"
     model_name_suffix = "" if model_name == "gpt-4-0125-preview" else f"_{model_name}"
-    categorized_results_file = f"{directory}/{question_type}_categorized_results{model_name_suffix}.json"
+    results_prefix = f"{directory}/{question_type}_categorized_results{model_name_suffix}"
+    if args.direction_method != "pca":
+        results_prefix += f"_{args.direction_method}"
+    if args.steering_unnormalized:
+        results_prefix += "_unnormalized"
+    categorized_results_file = f"{results_prefix}.json"
     if use_existing and os.path.exists(categorized_results_file):
         with open(categorized_results_file, "r") as f:
             categorized_data = json.load(f)
@@ -55,16 +60,22 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
             if str(multiplier) != str(evaluate_multiplier):
                 print(f"Skipping multiplier {multiplier}")
                 continue
-        potential_questions = set([entry["question"] for entry in multiplier_data["answers"]])
-        print(f"Potential questions for multiplier {multiplier}: {len(potential_questions)}")
+        vector_types = set([entry["vector_type"] for entry in multiplier_data["answers"]])
+        for vector_type in vector_types:
+            potential_questions = set([entry["question"] for entry in multiplier_data["answers"] if entry["vector_type"] == vector_type])
+            print(f"Potential questions for multiplier {multiplier} and vector type {vector_type}: {len(potential_questions)}")
         multiplier_key = f"multiplier_{multiplier}"
         existing_results = categorized_data.get(
             multiplier_key, [])
         
-        existing_questions = [entry["question"] for entry in existing_results]
-        print(f"Existing questions for multiplier {multiplier}: {len(existing_questions)}")
+        potential_existing_vector_types = set([entry["vec_type"] for entry in existing_results])
+        existing_questions = defaultdict(set)
+        for existing_vector_type in potential_existing_vector_types:
+            existing_questions_per_type = set([entry["question"] for entry in existing_results if entry["vec_type"] == existing_vector_type])
+            existing_questions[existing_vector_type] = existing_questions_per_type
+            print(f"Existing questions for multiplier {multiplier} vector type {existing_vector_type}: {len(existing_questions_per_type)}")
         for ans in multiplier_data["answers"]:
-            if ans["question"] in existing_questions:
+            if ans["question"] in existing_questions[ans["vector_type"]]:
                 continue
             if test_set_questions:
                 if ans["question"] not in test_set_questions:
@@ -82,14 +93,13 @@ def categorize_results(results, classifier_prompt, model_name, call_type,
                 "question": ans["question"],
                 "answer": ans["answer"],
                 "category": ans["category"],
-                "vec_type": "pca", "prompt": prompt}
+                "vec_type": ans["vector_type"], "prompt": prompt}
             all_prompts[multiplier_key].append(entry)
-
     # Send prompts in batches and get responses
 
     print(f"Evaluating {sum(len(v) for v in all_prompts.values())} prompts.")
             
-    batch_size = 100
+    batch_size = 400
     multiplier_keys_sorted = sorted(all_prompts.keys())
     all_prompts_only = []
     for multiplier_key in multiplier_keys_sorted:
@@ -142,17 +152,19 @@ def filter_categorized_data(categorized_data, test_set_questions, multiplier=0.0
     multiplier_key = f"multiplier_{multiplier}"
     if multiplier_key not in categorized_data:
         return categorized_data
-    potential_questions = set([entry["question"] for entry in categorized_data[multiplier_key]])
-    # assert test_set_questions.issubset(potential_questions)
-    if not test_set_questions.issubset(potential_questions):
+    vector_types = set([entry["vec_type"] for entry in categorized_data[multiplier_key]])
+    for vector_type in vector_types:
+        potential_questions = set([entry["question"] for entry in categorized_data[multiplier_key] if entry["vec_type"] == vector_type])
+        # assert test_set_questions.issubset(potential_questions)
+        if not test_set_questions.issubset(potential_questions):
+            if verbose:
+                print(f"Test set questions: {len(test_set_questions)}")
+                print(f"Potential questions: {len(potential_questions)}")
+                print(f"Example questions: {list(test_set_questions)[:1]}")
+                print(f"Example potential questions: {list(potential_questions)[:1]}")
+                print("Warning! Test set questions are not a subset of potential questions.")
         if verbose:
-            print(f"Test set questions: {len(test_set_questions)}")
             print(f"Potential questions: {len(potential_questions)}")
-            print(f"Example questions: {list(test_set_questions)[:1]}")
-            print(f"Example potential questions: {list(potential_questions)[:1]}")
-            print("Warning! Test set questions are not a subset of potential questions.")
-    if verbose:
-        print(f"Potential questions: {len(potential_questions)}")
     # filter out any questions not in the test set
     categorized_data[f"multiplier_{multiplier}"] = [entry for entry in categorized_data[f"multiplier_{multiplier}"] 
                                           if entry["question"] in test_set_questions]
@@ -176,7 +188,8 @@ def get_average_scores_json(categorized_data, grouped_categories_dict, multiplie
         #     if entry["score"] > 2:
         #         print(entry["question"])
         #         print(entry["answer"])
-        for vec_name in ["pca"]:
+        vec_names = set([entry["vec_type"] for entry in scores])
+        for vec_name in vec_names:
             average_scores[multiplier_key][vec_name] = {}
             vec_scores = [entry["score"]
                           for entry in scores if entry["vec_type"] == vec_name]
@@ -216,7 +229,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
         other_categories = sorted(list(grouped_categories_dict.keys()))
         for category_type in other_categories:
             for multiplier_key, multiplier_data in average_scores.items():
-                for vec_name in ["pca"]:
+                for vec_name in multiplier_data.keys():
                     if category_type in multiplier_data[vec_name]:
                         category_list.append(category_type)
     else:
@@ -228,21 +241,22 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
         for category in category_list:
             csv += f"{category},"
         csv += "\n"
-        csv += "Model, Steering dataset, Multiplier,pca\n"
+        csv += "Model, Steering dataset, Multiplier, vec_type\n"
     else:
         csv = ""
+    
     for multiplier_key, multiplier_data in average_scores.items():
-        multiplier_key = multiplier_key.replace("multiplier_", "")
-        csv += f"{model_name}, {steering_dataset},{multiplier_key},"
-        for category in category_list:
-            for vec_name in ["pca"]:
+        for vec_name in multiplier_data.keys():
+            multiplier_key = multiplier_key.replace("multiplier_", "")
+            csv += f"{model_name}, {steering_dataset},{multiplier_key}, {vec_name},"
+            for category in category_list:
                 # if "n/a" in multiplier_data:
                 #     if category in multiplier_data['n/a']:
                 #         csv += f"{multiplier_data['n/a'][category]},,,"
                 #         break
                 # use 2 decimal places
                 csv += f"{multiplier_data[vec_name].get(category, 0):.2f},"
-        csv += "\n"
+            csv += "\n"
     return csv.strip()
 
 
@@ -252,6 +266,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", action="store_true", help="Print verbose output.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing categorized results.")
+    parser.add_argument("--direction_method", type=str, help="The method used to steer the model.", choices=["pca", "random", "cluster_mean"], default="pca")
+    parser.add_argument("--steering_unnormalized", action="store_true", help="Use unnormalized steering vectors.")
     parser.add_argument("--evaluation_type", type=str, default="full",
                         help="The type of evaluation to perform.", choices=["full", "restricted"])
     args = parser.parse_args()
@@ -260,10 +276,14 @@ def main():
     if args.evaluation_type == "restricted":
         strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
         evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
+        if args.steering_unnormalized:
+            evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
     else:
         strict_categories = None
         evaluated_multipliers = [-2.0, -1.5, 0.0, 1.5, 2.0]
         evaluated_multipliers = [-1.5, -1.0, 0.0, 1.0, 1.5]
+        if args.steering_unnormalized:
+            evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
         # evaluated_multipliers = [0.0]
         # evaluated_multipliers = [1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -339,8 +359,10 @@ def main():
                 # print(f"Startle Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if i != 0 and evaluated_multiplier == 0.0:
                     continue    
-                # if evaluated_multiplier == 1.5 and "working" not in model_path:
-                #     continue
+                if args.direction_method != "pca":
+                    results_type += f"_{args.direction_method}"
+                if args.steering_unnormalized:
+                    results_type += "_unnormalized"
                 results_location = f"{directory}/{results_type}_results.json"
                 # print(f"ResultsFun {results_type} from model {model} with multiplier {evaluated_multiplier}.{results_location}")
                 if os.path.exists(results_location):
@@ -356,11 +378,16 @@ def main():
                 model_name = "gpt-3.5-turbo-1106" # "gpt-4-0125-preview" #"gpt-3.5-turbo-16k-0613"
                 call_type = "sample"  # or "logprobs"
                 model_name_suffix = "" if model_name == "gpt-4-0125-preview" else f"_{model_name}"
-                categorized_results_file = f"{directory}/{results_type}_categorized_results{model_name_suffix}.json"
+                results_prefix = f"{directory}/{results_type}_categorized_results{model_name_suffix}"
+                if args.direction_method != "pca":
+                    results_prefix += f"_{args.direction_method}"
+                if args.steering_unnormalized:
+                    results_prefix += "_unnormalized"
+                categorized_results_file = f"{results_prefix}.json"
                 # print(f"Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if overwrite or not os.path.exists(categorized_results_file):
                     categorized_results = categorize_results(
-                        results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_multiplier=evaluated_multiplier,
+                        args, results, classifier_prompt, model_name, call_type, directory, results_type, evaluate_multiplier=evaluated_multiplier,
                         strict_categories=strict_categories, test_set_questions=test_set_questions, verbose=args.verbose)
                 else:
                     with open(categorized_results_file, "r") as f:
