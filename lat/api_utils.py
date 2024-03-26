@@ -105,6 +105,7 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
         cached_responses = [CACHE.get_cached_response(model_name, prompt)
                             for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
         cached_prompts = [prompt for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
+        print(f"number of cached prompts: {len(cached_prompts)}")
         uncached_prompts = [prompt for prompt in prompts if not CACHE.is_key_stored(model_name, prompt)]
 
         if uncached_prompts:

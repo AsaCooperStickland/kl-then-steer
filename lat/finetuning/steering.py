@@ -137,8 +137,13 @@ class Steering:
 			datasets.append(data)
 		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
-
-		self.layer_id = list(range(-11, -30, -1))
+		if 'start_layer' in custom_args and 'end_layer' in custom_args:
+			start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
+			self.layer_id = list(range(start_layer, end_layer, -1))
+			if start_layer != -11 and end_layer != -30:
+				self.repe_key += f"_start_layer_{start_layer}_end_layer_{end_layer}"
+		else:
+			self.layer_id = list(range(-11, -30, -1))
 		self.block_name = "decoder_block"
 		self.token_pos = custom_args['token_pos']
 		self.normalize = custom_args['normalize']
