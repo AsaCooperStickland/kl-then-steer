@@ -204,7 +204,7 @@ class SteeringPPOTrainer(CustomPPOTrainer):
 
         return (loss, outputs) if return_outputs else loss
     
-    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+    def save_model(self, output_dir: Optional[str] = None):
         """
         Will save the model, so you can reload it using `from_pretrained()`.
 
@@ -213,5 +213,5 @@ class SteeringPPOTrainer(CustomPPOTrainer):
         
         self.steering.reset()
         self.steering.wrapped_model.unwrap()
-        super().save_model(output_dir, _internal_call)
+        super().save_model(output_dir)
         self.steering.wrapped_model.wrap_block(self.steering.layer_id, block_name=self.steering.block_name)

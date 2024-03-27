@@ -30,11 +30,17 @@ token = os.getenv("HF_TOKEN")
 
 def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, question_type="", temperature=0.0):
     # Define the layer range and block name for steering
-    layer_ids = list(range(-11, -30, -1))
+    start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
+    layer_ids = list(range(start_layer, end_layer))
     block_name = "decoder_block"
 
     # Define parameters for generation
-    results_file = f"{custom_args['results_path']}/{custom_args['steering_dataset']}_{question_type}results.json"
+    results_prefix = f"{custom_args['results_path']}/{custom_args['steering_dataset']}_{question_type}"
+    if custom_args["direction_method"] != "pca":
+        results_prefix += f"{custom_args['direction_method']}_"
+    if custom_args["steering_unnormalized"]:
+        results_prefix += "unnormalized_"
+    results_file = f"{results_prefix}results.json"
     if custom_args["overwrite_results"]:
         existing_results = {}
     else:
@@ -45,33 +51,55 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         else:
             existing_results = {}
     max_new_tokens = 1200
-    batch_size = 8
+    batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 48
     all_results = []
 
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
+    
+    with open(f"{custom_args['base_directory']}/lat/finetuning/steering_data/norms_llama-2-7b.json", "r") as f:
+        norms_dict = json.load(f)
+    s = trainer.steering
+    raw_activations = s.get_shift(coeff=1.0, layer_id=s.layer_id, num_pairs=200, mode='train')
+    if custom_args['direction_method'] == 'cluster_mean' and not custom_args['steering_unnormalized']:
+        print("Normalizing raw cluster_mean activations")
+        raw_activations = {k: v / torch.norm(str(k)) for k, v in raw_activations.items()}
+        # rror: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first
+    if custom_args['direction_method'] == 'pca' and custom_args['steering_unnormalized']:
+        print("Unnormalizing raw pca activations")
+        raw_activations = {k: v * norms_dict[str(k)] for k, v in raw_activations.items()}
 
     # Loop through each multiplier
-    for multiplier in [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]:
+    if custom_args['steering_unnormalized']:
+        multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
+    else:
+        multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
+    for multiplier in multipliers:
         print(f"Generating with multiplier {multiplier}")
         answers = []
-        trainer.steering.wrapped_model.reset()
-        activations = trainer.steering.get_shift(coeff=multiplier, layer_id=layer_ids, mode="test", num_pairs=200)
+        s.wrapped_model.reset()
+        activations = raw_activations.copy()
+        for layer in s.layer_id:
+            activations[layer] = activations[layer] * multiplier
+        # activations = s.get_shift(coeff=multiplier, layer_id=layer_ids, mode="test", num_pairs=200)
         for key in activations:
             activations[key] = activations[key].to(torch.bfloat16)
-        trainer.steering.wrapped_model.set_controller(layer_ids, activations, block_name)
-        trainer.steering.wrapped_model.to(torch.bfloat16)
+        s.wrapped_model.set_controller(layer_ids, activations, block_name)
+        s.wrapped_model.to(torch.bfloat16)
         if multiplier in existing_results:
             answers = existing_results[multiplier]
             # filter question is for existing answers
-            existing_questions = set([a["question"] for a in answers])
             # delete any questions without the correct steering key
             for a in answers:
                 if "vector_type" not in a:
                     a["vector_type"] = "pca"
-                if a["vector_type"] != trainer.steering.repe_key:
+                if a["vector_type"] != s.repe_key:
                     answers.remove(a)
+                    
+            existing_questions = set([a["question"] for a in answers if a["vector_type"] == s.repe_key])
+            print(f"Found {len(existing_questions)} existing answers")
             new_questions = [q for q in questions if q["question"] not in existing_questions]
+            print(f"Generating for {len(new_questions)} new questions")
         else:
             new_questions = deepcopy(questions)
 
@@ -107,7 +135,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                 print('---')
 
         all_results.append({"multiplier": multiplier, "answers": answers})
-        trainer.steering.reset()
+        s.reset()
 
         # Save results after each multiplier finishes
         with open(results_file, "w") as jfile:
@@ -123,7 +151,6 @@ def run_generation(
 ):
     model, tokenizer = load_model_and_tokenizer(
         model_args, finetuning_args, training_args.do_train)
-
     tokenizer.padding_side = "left"  # use left-padding in generation
         
     questions = []
@@ -147,6 +174,7 @@ def run_generation(
         model=model,
         steering=steering,
         args=training_args,
+        ref_model=None,
         custom_args=custom_args,
         tokenizer=tokenizer,
         callbacks=callbacks,
@@ -193,11 +221,15 @@ def main():
     parser.add_argument('--dataset', default='training_0')  # ignored!
     parser.add_argument('--steering_dataset', default='refusal_test')
     parser.add_argument('--adapter_name_or_path', type=str, default=None)
+    parser.add_argument('--template', type=str, default='llama2chatsimple')
+    parser.add_argument('--start_layer', type=int, default=-11)
+    parser.add_argument('--end_layer', type=int, default=-30)
     parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--rep_token', default=-1)
     parser.add_argument('--direction_method', default='pca',
                         choices=['random', 'pca', 'cluster_mean'])
+    parser.add_argument('--steering_unnormalized', action='store_true')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
@@ -216,6 +248,7 @@ def main():
     for size in model_sizes:
         name_to_path[f'/vast/work/public/ml-datasets/llama-2/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
         name_to_path[f'meta-llama/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
+    name_to_path["NousResearch/Nous-Hermes-2-Mistral-7B-DPO"] = f"{cmd_args.output_dir}/hermes-2-mistral-7b-dpo"
                     
     custom_args = {
         "base_directory": cmd_args.base_directory,
@@ -225,7 +258,12 @@ def main():
         'samples_dir': cmd_args.samples_dir,
         'buffer_size': cmd_args.buffer_size,
         'rep_token': cmd_args.rep_token,
+        'token_pos': None,
+        'normalize': False,
         'direction_method': cmd_args.direction_method,
+        'steering_unnormalized': cmd_args.steering_unnormalized,
+        'start_layer': cmd_args.start_layer,
+        'end_layer': cmd_args.end_layer,
         'loss_function': "vanilla",
         'steering_coeff_range': "positive",
         'samples_freq': cmd_args.samples_freq,
@@ -234,6 +272,7 @@ def main():
         'subsample_steering_data': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
         "overwrite_results": cmd_args.overwrite_results,
+        "merge_adapter": cmd_args.finetuning_type == "lora",
     }
 
     input_args = {
@@ -241,7 +280,7 @@ def main():
         "model_name_or_path": cmd_args.model_name_or_path,
         "adapter_name_or_path": cmd_args.adapter_name_or_path,
         "do_train": False,
-        "template": "llama2chatsimple",
+        "template": cmd_args.template,
         'dataset_dir': cmd_args.dataset_dir,
         "dataset": cmd_args.dataset,
         "finetuning_type": cmd_args.finetuning_type,
@@ -274,6 +313,8 @@ def main():
     directory_or_model_name_or_path = name_to_path[custom_args['model_name_or_path']] if custom_args['model_name_or_path'] in name_to_path else custom_args['model_name_or_path']
     if cmd_args.adapter_name_or_path is not None:
         directory_or_model_name_or_path = cmd_args.adapter_name_or_path
+    if custom_args["merge_adapter"]:
+        directory_or_model_name_or_path = f"{directory_or_model_name_or_path}/merged"
     custom_args['results_path'] = directory_or_model_name_or_path
     # custom_args['results_path'] = f"{directory_or_model_name_or_path}/{output_folder_name}"
     os.makedirs(custom_args['results_path'], exist_ok=True)

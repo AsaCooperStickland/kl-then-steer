@@ -2,3 +2,10 @@ datasets/refusal/training/* filter=lfs diff=lfs merge=lfs -text
 datasets/refusal/training/** filter=lfs diff=lfs merge=lfs -text
 lat/finetuning/finetuning_data/training_0.json filter=lfs diff=lfs merge=lfs -text
 lat/finetuning/finetuning_data/training_persuasion0.50.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.10.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.12.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.20.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.25.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.30.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.40.json filter=lfs diff=lfs merge=lfs -text
+lat/finetuning/finetuning_data/training_persuasion0.50_refusal0.50.json filter=lfs diff=lfs merge=lfs -text

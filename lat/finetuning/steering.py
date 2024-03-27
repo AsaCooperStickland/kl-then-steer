@@ -5,6 +5,7 @@ import os
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
+from trl import AutoModelForCausalLMWithValueHead
 
 from lat.finetuning.steering_data import *
 
@@ -23,9 +24,17 @@ def create_labels(data):
 	data = [prompt for pair in data for prompt in pair]
 	return {'data': data, 'labels': train_labels}
 
-def preprocess_steering_data(data):
-	user_tag = "[INST]"
-	assistant_tag = "[/INST]"
+def preprocess_steering_data(data, template="llama2chatsimple"):
+	assert template in ["llama2chatsimple", "chatml"]
+	if template == "llama2chatsimple":
+		user_tag = "[INST]"
+		assistant_tag = "[/INST]"
+	elif template == "chatml":
+		user_tag = "<|im_start|>user\n"
+		assistant_tag = "<|im_end|>\n<|im_start|>assistant\n"
+	else:
+		raise ValueError
+		
 	output_data = {}
 	for category, pairs in data.items():
 		pairs = [[f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}' for user_prompt, assistant_prompt in pair]
@@ -45,7 +54,13 @@ def preprocess_steering_data(data):
 class Steering:
 	def __init__(self, dataset_name, model_arg, tokenizer_arg, data_dir, custom_args):
 		self.custom_args = custom_args
-		self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
+		if isinstance(model_arg, AutoModelForCausalLMWithValueHead):
+			self.model = model_arg.pretrained_model.model if custom_args['finetuning_type'] == 'lora' else model_arg.pretrained_model
+			print(self.model)
+		else:
+			self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
+		if custom_args['merge_adapter']:
+			self.model = model_arg
 
 		# self.tokenizer = tokenizer
 		config_kwargs = {'trust_remote_code': True, 'cache_dir': None, 'revision': 'main', 'token': None}
@@ -118,13 +133,20 @@ class Steering:
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/filtered_questions_style_question_pairs.json")
 			else:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
-			data = preprocess_steering_data(data)
+			data = preprocess_steering_data(data) # add template
 			datasets.append(data)
 		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
-
-		self.layer_id = list(range(-11, -30, -1))
+		if 'start_layer' in custom_args and 'end_layer' in custom_args:
+			start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
+			self.layer_id = list(range(start_layer, end_layer, -1))
+			if start_layer != -11 and end_layer != -30:
+				self.repe_key += f"_start_layer_{start_layer}_end_layer_{end_layer}"
+		else:
+			self.layer_id = list(range(-11, -30, -1))
 		self.block_name = "decoder_block"
+		self.token_pos = custom_args['token_pos']
+		self.normalize = custom_args['normalize']
 
 		self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model, self.tokenizer)
 		self.wrapped_model.unwrap()
@@ -230,7 +252,7 @@ class Steering:
 		self.wrapped_model.reset()
 		for key in activations:
 			activations[key] = activations[key].to(torch.bfloat16)
-		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name)
+		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos, normalize=self.normalize)
 		self.wrapped_model.to(torch.bfloat16)
 
 	def reset(self):

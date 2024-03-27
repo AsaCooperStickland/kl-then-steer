@@ -18,11 +18,21 @@ def json_to_questions(json_path: str) -> list:
     return questions
 
 
-def prompt_format(instruction):
-    B_INST, E_INST = "[INST]", "[/INST]"
-    B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
-    dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+def prompt_format(instruction, template="llama2chatsimple"):
+    assert template in ["llama2chatsimple", "chatml"]
+    if template == "llama2chatsimple":
+        B_INST, E_INST = "[INST]", "[/INST]"
+        B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
+        dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
+        dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+    elif template == "chatml":
+        B_INST, E_INST = "<|im_start|>user\n", "<|im_end|>\n<|im_start|>assistant\n"
+        B_SYS, E_SYS = "<|im_start|>system\n", "<|im_end|>\n"
+        dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
+        dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+    else:
+        raise ValueError
+        
     return dialog_content
 
 
@@ -75,9 +85,11 @@ class Formatter:
             for item in questions[start_index:end_index]:
                 augmented_question = self.format_example(template_prompt, item["question"])
                 mappings[augmented_question] = item["question"]
-                item["question"] = augmented_question
-                item["category"] = category_key
-                formatted_questions.append(item)
+                new_item = {"question": augmented_question, "category": category_key}
+                for k, v in item.items():
+                    if k not in new_item:
+                        new_item[k] = v
+                formatted_questions.append(new_item)
         return formatted_questions, mappings
 
     def get_category_keys(self, templates, category, model, extra_diverse=False):
