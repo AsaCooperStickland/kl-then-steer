@@ -40,8 +40,8 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
         self.custom_args = custom_args
         self.steering = steering
         self.kl_loss = custom_args["loss_function"] == "kl"
-        print(self.model)
-        print(self.accelerator.unwrap_model(self.model))
+        # print(self.model)
+        # print(self.accelerator.unwrap_model(self.model))
         self.optional_peft_ctx = (
             self.model.disable_adapter
             if (isinstance(self.model, PeftModel) and self.kl_loss)

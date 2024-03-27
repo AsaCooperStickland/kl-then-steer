@@ -10,11 +10,12 @@ base_path=/scratch/alc9734/latent-adversarial-training/results ;
 
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b ; done;
-# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering norm ; done;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering mean ; done;
+for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering pca_unnorm ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering last_20 ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b steering ; done;
-# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b steering norm ; done;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b steering mean ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b steering last_20 ; done;
 # for m in ${base_path}/run2_persuasion_0.5 ; do sbatch submit_mt.sh $m persuasion_0.5 ; done;
 # for m in ${base_path}/run2_persuasion_0.5 ; do sbatch submit_mt.sh $m persuasion_0.5 steering ; done;
@@ -34,8 +35,9 @@ base_path=/scratch/alc9734/latent-adversarial-training/results ;
 # for l in run2_lora_working_concepts_0.5_range-1,1 run2_lora_large_scale_concept_0.5_range-1,1 run2_lora_kl_large_scale_concept_0.5 run2_lora_working_concepts_0.5_noisytune ; do
 # for l in run2_lora_kl_large_scale_concept_0.5 run2_lora_working_concepts_0.5_noisytune ; do
 # for l in run2_ppo_working_concepts_0.5 ; do
-for l in run2_ppo_working_concepts_0.5 run2_lora_kl_lr_1e-5_working_concepts_0.5 run2_lora_kl_lr_1e-5_large_scale_concept_0.5 run2_lora_kl_lr_5e-5_working_concepts_0.5 run2_lora_kl_lr_5e-5_large_scale_concept_0.5 run2_lora_kl_lr_1e-5_working_concepts_0.125 run2_lora_kl_lr_1e-5_large_scale_concept_0.125 run2_lora_kl_lr_5e-5_working_concepts_0.125 run2_lora_kl_lr_5e-5_large_scale_concept_0.125 ; do
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do
-  sbatch submit_mt.sh $m $l lora ${base_path}/${l};
-  done
-done;
+# for l in run2_ppo_working_concepts_0.5 run2_lora_kl_lr_1e-5_working_concepts_0.5 run2_lora_kl_lr_1e-5_large_scale_concept_0.5 run2_lora_kl_lr_5e-5_working_concepts_0.5 run2_lora_kl_lr_5e-5_large_scale_concept_0.5 run2_lora_kl_lr_1e-5_working_concepts_0.125 run2_lora_kl_lr_1e-5_large_scale_concept_0.125 run2_lora_kl_lr_5e-5_working_concepts_0.125 run2_lora_kl_lr_5e-5_large_scale_concept_0.125 ; do
+# for l in run2_ppo_persuasion_refusal0.50 ; do
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do
+#   sbatch submit_mt.sh $m $l lora ${base_path}/${l};
+#   done
+# done;
