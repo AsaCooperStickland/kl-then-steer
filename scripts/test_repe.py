@@ -31,7 +31,7 @@ token = os.getenv("HF_TOKEN")
 def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, question_type="", temperature=0.0):
     # Define the layer range and block name for steering
     start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
-    layer_ids = list(range(start_layer, end_layer))
+    layer_ids = list(range(start_layer, end_layer, -1))
     block_name = "decoder_block"
 
     # Define parameters for generation
