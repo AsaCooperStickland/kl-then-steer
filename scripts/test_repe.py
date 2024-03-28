@@ -31,7 +31,7 @@ token = os.getenv("HF_TOKEN")
 def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, question_type="", temperature=0.0):
     # Define the layer range and block name for steering
     start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
-    layer_ids = list(range(start_layer, end_layer))
+    layer_ids = list(range(start_layer, end_layer, -1))
     block_name = "decoder_block"
 
     # Define parameters for generation
@@ -51,7 +51,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         else:
             existing_results = {}
     max_new_tokens = 1200
-    batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 48
+    batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 1
     all_results = []
 
     if tokenizer.pad_token_id is None:
@@ -59,8 +59,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     
     with open(f"{custom_args['base_directory']}/lat/finetuning/steering_data/norms_llama-2-7b.json", "r") as f:
         norms_dict = json.load(f)
-    s = trainer.steering
-    raw_activations = s.get_shift(coeff=1.0, layer_id=s.layer_id, num_pairs=200, mode='train')
+    # s = trainer.steering
+    raw_activations = trainer.steering.get_shift(coeff=1.0, layer_id=trainer.steering.layer_id, num_pairs=200, mode='train')
     if custom_args['direction_method'] == 'cluster_mean' and not custom_args['steering_unnormalized']:
         print("Normalizing raw cluster_mean activations")
         raw_activations = {k: v / torch.norm(str(k)) for k, v in raw_activations.items()}
@@ -77,15 +77,15 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     for multiplier in multipliers:
         print(f"Generating with multiplier {multiplier}")
         answers = []
-        s.wrapped_model.reset()
+        trainer.steering.wrapped_model.reset()
         activations = raw_activations.copy()
-        for layer in s.layer_id:
+        for layer in trainer.steering.layer_id:
             activations[layer] = activations[layer] * multiplier
         # activations = s.get_shift(coeff=multiplier, layer_id=layer_ids, mode="test", num_pairs=200)
         for key in activations:
             activations[key] = activations[key].to(torch.bfloat16)
-        s.wrapped_model.set_controller(layer_ids, activations, block_name)
-        s.wrapped_model.to(torch.bfloat16)
+        trainer.steering.wrapped_model.set_controller(layer_ids, activations, block_name)
+        trainer.steering.wrapped_model.to(torch.bfloat16)
         if multiplier in existing_results:
             answers = existing_results[multiplier]
             # filter question is for existing answers
@@ -93,10 +93,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             for a in answers:
                 if "vector_type" not in a:
                     a["vector_type"] = "pca"
-                if a["vector_type"] != s.repe_key:
-                    answers.remove(a)
                     
-            existing_questions = set([a["question"] for a in answers if a["vector_type"] == s.repe_key])
+            existing_questions = set([a["question"] for a in answers if a["vector_type"] == trainer.steering.repe_key])
             print(f"Found {len(existing_questions)} existing answers")
             new_questions = [q for q in questions if q["question"] not in existing_questions]
             print(f"Generating for {len(new_questions)} new questions")
@@ -109,6 +107,14 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                                  for q in new_questions[i: min(i + batch_size, len(new_questions))]]
             batched_categories = [q["category"]
                                   for q in new_questions[i: min(i + batch_size, len(new_questions))]]
+            if custom_args['test_setting'] == "bias":
+                batched_ground_truth = [q["ground_truth"]
+                                        for q in new_questions[i: min(i + batch_size, len(new_questions))]]
+                batched_biased_option = [q["biased_option"]
+                                         for q in new_questions[i: min(i + batch_size, len(new_questions))]]
+                extra_data = {"ground_truth": batched_ground_truth, "biased_option": batched_biased_option}
+            else:
+                extra_data = None
 
             # Generate texts
 
@@ -121,21 +127,25 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                 generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
             # Process generated texts
-            for question, category, text in zip(batched_questions, batched_categories, generated_texts):
+            for idx, (question, category, text) in enumerate(zip(batched_questions, batched_categories, generated_texts)):
                 text = text.split("[/INST]")[-1].strip()
                 # print(f"Question: {question}")
                 # print(f"Category: {category}")
                 # print(f"Answer: {text}")
                 # print(
                 #     f"Settings: multiplier {multiplier}, directory {directory}, question_type {question_type}")
-                answers.append({"question": question, "answer": text, "vector_type": trainer.steering.repe_key,
-                               "category": category, "multiplier": multiplier})
+                outputs_and_data = {"question": question, "answer": text, "vector_type": trainer.steering.repe_key,
+                               "category": category, "multiplier": multiplier}
+                if extra_data is not None:
+                    for key in extra_data:
+                        outputs_and_data[key] = extra_data[key][idx]
+                answers.append(outputs_and_data)
                 print('Multipler:', multiplier)
                 print(text)
                 print('---')
 
         all_results.append({"multiplier": multiplier, "answers": answers})
-        s.reset()
+        trainer.steering.reset()
 
         # Save results after each multiplier finishes
         with open(results_file, "w") as jfile:
@@ -153,22 +163,6 @@ def run_generation(
         model_args, finetuning_args, training_args.do_train)
     tokenizer.padding_side = "left"  # use left-padding in generation
         
-    questions = []
-    
-    if custom_args['test_setting'] == "manual_jailbreaks":
-        file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
-    elif custom_args['test_setting'] == "ultra_filtered":
-        file_path = f"{custom_args['base_directory']}/datasets/refusal/ultra_filtered_questions.jsonl"
-    else:
-        file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
-    
-    # Open the JSONL file and extract questions.
-    with jsonlines.open(file_path) as reader:
-        for item in reader:
-            if 'question' in item:
-                item["question"] = prompt_format(item["question"])
-                questions.append(item)
-
     steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
     trainer = SteeringTrainer(
         model=model,
@@ -179,6 +173,23 @@ def run_generation(
         tokenizer=tokenizer,
         callbacks=callbacks,
     )
+    
+    questions = []
+    
+    if custom_args['test_setting'] == "manual_jailbreaks":
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
+    elif custom_args['test_setting'] == "ultra_filtered":
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/ultra_filtered_questions.jsonl"
+    else:
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
+    
+    # Open the JSONL file and extract questions.
+    if custom_args['test_setting'] != "bias":
+        with jsonlines.open(file_path) as reader:
+            for item in reader:
+                if 'question' in item:
+                    item["question"] = prompt_format(item["question"])
+                    questions.append(item)
 
     if custom_args['test_setting'] == "manual_jailbreaks":
         with open(f"{custom_args['base_directory']}/{jailbreaks_path}", "r") as f:
@@ -196,6 +207,27 @@ def run_generation(
     elif custom_args["test_setting"] == "vanilla" or custom_args["test_setting"] == "ultra_filtered":
         generate_with_vector(trainer, tokenizer, questions,
                              "vanilla_steering", custom_args)
+        
+    elif custom_args["test_setting"] == "bias":
+        for bias_type in ["suggested_answer"]:
+            for dataset in ["truthfulqa", "mmlu", "hellaswag", "logicqa"]:
+                unbiased_questions = []
+                biased_questions = []
+                file_name = os.path.join(bias_type, f"{dataset}_{bias_type}.jsonl")
+                with jsonlines.open(os.path.join(custom_args["bias_path"], file_name)) as reader:
+                    for item in reader:
+                        if 'original_question' in item:
+                            item["question"] = prompt_format(item["original_question"])
+                            unbiased_questions.append({"question": item["question"], "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
+                        if 'biased_question' in item:
+                            biased_question_content = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\". It's very important that you stick to this format.\n\nLet's think step by step:", "")
+                            biased_questions.append({"question": prompt_format(biased_question_content), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
+                
+                generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
+                generate_with_vector(trainer, tokenizer, unbiased_questions, f"{dataset}_{bias_type}_unbiased", custom_args, question_type=f"{dataset}_{bias_type}_unbiased_")
+
+
+
     else:
         raise ValueError(f"Invalid test setting: {custom_args['test_setting']}, must be one of 'manual_jailbreaks' or 'vanilla'")
 
@@ -224,7 +256,8 @@ def main():
     parser.add_argument('--template', type=str, default='llama2chatsimple')
     parser.add_argument('--start_layer', type=int, default=-11)
     parser.add_argument('--end_layer', type=int, default=-30)
-    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks'])
+    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks', 'bias'])
+    parser.add_argument('--bias_path', default='/scratch/alc9734/cot-transparency/dataset_dumps/test')
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--rep_token', default=-1)
     parser.add_argument('--direction_method', default='pca',
@@ -255,6 +288,7 @@ def main():
         "steering_data_path": cmd_args.steering_data_path,
         'steering_dataset': cmd_args.steering_dataset,
         'test_setting': cmd_args.test_setting,
+        'bias_path': cmd_args.bias_path,
         'samples_dir': cmd_args.samples_dir,
         'buffer_size': cmd_args.buffer_size,
         'rep_token': cmd_args.rep_token,
@@ -293,7 +327,7 @@ def main():
         "learning_rate": 5e-5,
         "num_train_epochs": 1.0,
         "plot_loss": True,
-        "bf16": True,
+        # "bf16": True,
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,

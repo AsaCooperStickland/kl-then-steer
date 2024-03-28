@@ -1,4 +1,5 @@
 import json
+import jsonlines
 import numpy as np
 import random
 import os
@@ -156,6 +157,45 @@ def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False,
 	pairs = list(zip(*[c_e, o_e]))
 	data = {"refusal": pairs}
 	return data
+
+
+def get_bias_pairs(data_dir, mode="train", path=None, full_answer=False, 
+					  augment_bad_answer=False):
+	assert mode in ["train", "test", "all"]
+
+	if path is None:
+		raise ValueError
+	
+	with jsonlines.open(os.path.join(data_dir, path)) as reader:
+		raw_data = list(reader)
+	
+	if mode == "train":
+		raw_data = raw_data[:int(0.8 * len(raw_data))]
+	if mode == 'test':
+		raw_data = raw_data[int(0.8 * len(raw_data)):]
+
+	c_e, o_e = [], []
+	for item in raw_data:		
+		if augment_bad_answer:
+			assert "biased_question" in item, "augment_bad_answer requires biased question"
+			question = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\". It's very important that you stick to this format.\n\nLet's think step by step:", "")
+		else:
+			question = item["original_question"]
+		positive_key = "ground_truth"
+		negative_key = "biased_option"
+		pos_answer = item[positive_key].strip()
+		neg_answer = item[negative_key].strip()
+		pos_example = (question, pos_answer)
+		neg_example = (question, neg_answer)
+		c_e.append(neg_example)
+		o_e.append(pos_example)
+	
+	pairs = list(zip(*[c_e, o_e]))
+	path = path.replace(".jsonl", "")
+	data = {path: pairs}
+	# data = {f"{path.replace(".jsonl", "")}": pairs}
+	return data
+
 
 def get_prompt_pairs(data_dir, mode="train", path=None):
 	assert mode in ["train", "test", "all"]
