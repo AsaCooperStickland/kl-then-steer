@@ -51,7 +51,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         else:
             existing_results = {}
     max_new_tokens = 1200
-    batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 1
+    batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 48
     all_results = []
 
     if tokenizer.pad_token_id is None:
@@ -327,7 +327,7 @@ def main():
         "learning_rate": 5e-5,
         "num_train_epochs": 1.0,
         "plot_loss": True,
-        # "bf16": True,
+        "bf16": True,
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,
