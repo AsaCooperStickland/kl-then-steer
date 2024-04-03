@@ -131,6 +131,13 @@ class Steering:
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_question_pairs.json")
 			elif dataset_name == 'filtered_questions_style_question_pairs':
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/filtered_questions_style_question_pairs.json")
+			elif "bias" in dataset_name:
+				_, data_source, *bias_type = dataset_name.split('_')
+				# bias type may be a list, turn back to a string
+				if isinstance(bias_type, list):
+					bias_type = "_".join(bias_type)
+				path = os.path.join(bias_type, f"{data_source}_{bias_type}.jsonl")
+				data = get_bias_pairs(data_dir, mode=mode, path=path, augment_bad_answer=True)
 			else:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
 			data = preprocess_steering_data(data) # add template

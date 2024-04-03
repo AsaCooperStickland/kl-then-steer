@@ -23,6 +23,7 @@ logger = get_logger(__name__)
 if is_deepspeed_available():
     import deepspeed
 
+
 class SteeringTrainer(CustomSeq2SeqTrainer):
     def __init__(self, ref_model, custom_args, steering, **kwargs):
         self.ref_model = ref_model

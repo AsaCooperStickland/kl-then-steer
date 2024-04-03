@@ -10,7 +10,7 @@ base_path=/scratch/alc9734/latent-adversarial-training/results ;
 
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-13b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat13b ; done;
-# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering mean ; done;
+for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering mean ; done;
 for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering pca_unnorm ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering last_20 ; done;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do sbatch submit_mt.sh $m llama-2-chat7b steering ; done;
