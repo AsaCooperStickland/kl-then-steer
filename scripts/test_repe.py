@@ -40,7 +40,9 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         results_prefix += f"{custom_args['direction_method']}_"
     if custom_args["steering_unnormalized"]:
         results_prefix += "unnormalized_"
-    results_file = f"{results_prefix}results.json"
+    if start_layer != -11 and end_layer != -30:
+        results_prefix += f"layers_{start_layer}_{end_layer}_"
+    results_file = f"{results_prefix}results_bs1.json"
     if custom_args["overwrite_results"]:
         existing_results = {}
     else:
@@ -52,6 +54,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             existing_results = {}
     max_new_tokens = 1200
     batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 48
+    if custom_args["no_bf16"]:
+        batch_size = 8 
     all_results = []
 
     if tokenizer.pad_token_id is None:
@@ -71,7 +75,10 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
 
     # Loop through each multiplier
     if custom_args['steering_unnormalized']:
-        multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
+        multipliers = [-0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5]
+        # multipliers = [0.0]
+        if custom_args["direction_method"] == "cluster_mean":
+            multipliers = [1.0, 0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
     else:
         multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
     for multiplier in multipliers:
@@ -107,7 +114,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                                  for q in new_questions[i: min(i + batch_size, len(new_questions))]]
             batched_categories = [q["category"]
                                   for q in new_questions[i: min(i + batch_size, len(new_questions))]]
-            if custom_args['test_setting'] == "bias":
+            if "bias" in custom_args['test_setting']:
                 batched_ground_truth = [q["ground_truth"]
                                         for q in new_questions[i: min(i + batch_size, len(new_questions))]]
                 batched_biased_option = [q["biased_option"]
@@ -161,7 +168,11 @@ def run_generation(
 ):
     model, tokenizer = load_model_and_tokenizer(
         model_args, finetuning_args, training_args.do_train)
-    tokenizer.padding_side = "left"  # use left-padding in generation
+    # tokenizer.pad_token = "[PAD]"
+    tokenizer.pad_token = " "
+    # tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+    # padding_side = "left"  # use left-padding in generation
         
     steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
     trainer = SteeringTrainer(
@@ -184,7 +195,7 @@ def run_generation(
         file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
     
     # Open the JSONL file and extract questions.
-    if custom_args['test_setting'] != "bias":
+    if "bias" not in custom_args['test_setting']:
         with jsonlines.open(file_path) as reader:
             for item in reader:
                 if 'question' in item:
@@ -208,19 +219,21 @@ def run_generation(
         generate_with_vector(trainer, tokenizer, questions,
                              "vanilla_steering", custom_args)
         
-    elif custom_args["test_setting"] == "bias":
+    elif "bias" in custom_args["test_setting"]:
+        _, *bias_dataset = custom_args["test_setting"].split("_")
+        bias_dataset = "_".join(bias_dataset)
         for bias_type in ["suggested_answer"]:
-            for dataset in ["truthfulqa", "mmlu", "hellaswag", "logicqa"]:
+            for dataset in [bias_dataset]:
                 unbiased_questions = []
                 biased_questions = []
                 file_name = os.path.join(bias_type, f"{dataset}_{bias_type}.jsonl")
                 with jsonlines.open(os.path.join(custom_args["bias_path"], file_name)) as reader:
                     for item in reader:
                         if 'original_question' in item:
-                            item["question"] = prompt_format(item["original_question"])
+                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"")
                             unbiased_questions.append({"question": item["question"], "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                         if 'biased_question' in item:
-                            biased_question_content = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\". It's very important that you stick to this format.\n\nLet's think step by step:", "")
+                            biased_question_content = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\".", "").replace("It's very important that you stick to this format.", "").replace("\n\nLet's think step by step:", "").rstrip() + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\""
                             biased_questions.append({"question": prompt_format(biased_question_content), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                 
                 generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
@@ -240,6 +253,7 @@ def main():
     parser.add_argument('--wandb_dir', default='wandb')
     parser.add_argument('--output_dir', default='results/tmp')
     parser.add_argument('--flash_attn', action='store_true')
+    parser.add_argument('--no_bf16', action='store_true')
     parser.add_argument('--overwrite_results', action='store_true')
     parser.add_argument('--finetuning_type', default='full',
                         choices=['full', 'lora'])
@@ -256,7 +270,7 @@ def main():
     parser.add_argument('--template', type=str, default='llama2chatsimple')
     parser.add_argument('--start_layer', type=int, default=-11)
     parser.add_argument('--end_layer', type=int, default=-30)
-    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks', 'bias'])
+    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks', 'bias_mmlu', 'bias_truthfulqa', 'bias_hellaswag', 'bias_logiqa'])
     parser.add_argument('--bias_path', default='/scratch/alc9734/cot-transparency/dataset_dumps/test')
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--rep_token', default=-1)
@@ -304,6 +318,7 @@ def main():
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,
         'subsample_steering_data': False,
+        'no_bf16': cmd_args.no_bf16,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
         "overwrite_results": cmd_args.overwrite_results,
         "merge_adapter": cmd_args.finetuning_type == "lora",
@@ -327,7 +342,7 @@ def main():
         "learning_rate": 5e-5,
         "num_train_epochs": 1.0,
         "plot_loss": True,
-        "bf16": True,
+        "bf16": not cmd_args.no_bf16,
         "overwrite_output_dir": True,
         "seed": 15,
         "flash_attn": cmd_args.flash_attn,

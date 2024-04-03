@@ -79,11 +79,11 @@ def extract_score(classification_str):
     return None  # or return 0 or any default value
 
 
-do_cache = False
+do_cache = True
 if do_cache:
     # load cache if it exists
     print("loading cache...")
-    CACHE = ModelResponseCache(db_path='model_responses_cache.db')
+    CACHE = ModelResponseCache(db_path='model_responses_cache2.db')
     print("cache loaded")
 else:
     CACHE = None

@@ -178,13 +178,14 @@ def get_bias_pairs(data_dir, mode="train", path=None, full_answer=False,
 	for item in raw_data:		
 		if augment_bad_answer:
 			assert "biased_question" in item, "augment_bad_answer requires biased question"
-			question = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\". It's very important that you stick to this format.\n\nLet's think step by step:", "")
+			# question = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\". It's very important that you stick to this format.\n\nLet's think step by step:", "")
+			question = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\".", "").replace("It's very important that you stick to this format.", "").replace("\n\nLet's think step by step:", "").rstrip() + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\""
 		else:
-			question = item["original_question"]
+			question = item["original_question"].rstrip() + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\""
 		positive_key = "ground_truth"
 		negative_key = "biased_option"
-		pos_answer = item[positive_key].strip()
-		neg_answer = item[negative_key].strip()
+		pos_answer = f"Therefore, the best answer is: ({item[positive_key].strip()})"
+		neg_answer = f"Therefore, the best answer is: ({item[negative_key].strip()})"
 		pos_example = (question, pos_answer)
 		neg_example = (question, neg_answer)
 		c_e.append(neg_example)
