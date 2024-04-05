@@ -44,7 +44,7 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
         results_prefix += f"_{args.direction_method}"
     if args.steering_unnormalized:
         results_prefix += "_unnormalized"
-    categorized_results_file = f"{results_prefix}.json"
+    categorized_results_file = f"{results_prefix}_bs1.json"
     if use_existing and os.path.exists(categorized_results_file):
         with open(categorized_results_file, "r") as f:
             categorized_data = json.load(f)
@@ -112,7 +112,7 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
 
     print(f"Evaluating {sum(len(v) for v in all_prompts.values())} prompts.")
             
-    batch_size = 250
+    batch_size = 100
     multiplier_keys_sorted = sorted(all_prompts.keys())
     all_prompts_only = []
     for multiplier_key in multiplier_keys_sorted:
@@ -391,11 +391,11 @@ def main():
                     results_type += f"_{args.direction_method}"
                 if args.steering_unnormalized:
                     results_type += "_unnormalized"
-                results_location = f"{directory}/{results_type}_results.json"
+                results_location = f"{directory}/{results_type}_results_bs1.json"
                 # print(f"ResultsFun {results_type} from model {model} with multiplier {evaluated_multiplier}.{results_location}")
                 if os.path.exists(results_location):
                     results = json.load(
-                        open(f"{directory}/{results_type}_results.json", "r"))
+                        open(f"{directory}/{results_type}_results_bs1.json", "r"))
                 else:
                     if verbose:
                         print(f"Results for {results_type} from model {results_location} not found.")
@@ -411,7 +411,7 @@ def main():
                     results_prefix += f"_{args.direction_method}"
                 if args.steering_unnormalized:
                     results_prefix += "_unnormalized"
-                categorized_results_file = f"{results_prefix}.json"
+                categorized_results_file = f"{results_prefix}_bs1.json"
                 # print(f"Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if overwrite or not os.path.exists(categorized_results_file):
                     categorized_results = categorize_results(

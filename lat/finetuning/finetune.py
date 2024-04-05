@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
     parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
     parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
+    parser.add_argument('--base_directory', default='/scratch/alc9734/latent-adversarial-training/')
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=1)
@@ -43,6 +44,7 @@ def main():
     parser.add_argument('--buffer_size', type=int, default=0)
     parser.add_argument('--rep_token', default=-1)
     parser.add_argument('--direction_method', default='pca', choices=['random', 'pca', 'cluster_mean'])
+    parser.add_argument('--steering_unnormalized', action='store_true')
     parser.add_argument('--loss_function', default='vanilla', choices=['vanilla', 'kl'])
     parser.add_argument('--steering_coeff', type=float, default=None)
     parser.add_argument('--steering_coeff_range', type=str, default='positive', choices=['positive', 'both'])
@@ -66,6 +68,7 @@ def main():
 
     custom_args = {
         "steering_data_path": cmd_args.steering_data_path,
+        "base_directory": cmd_args.base_directory,
         'steering_dataset': cmd_args.steering_dataset,
         'do_steer': cmd_args.do_steer,
         'samples_dir': cmd_args.samples_dir,
@@ -74,6 +77,7 @@ def main():
         'run_name': cmd_args.run_name,
         'rep_token': cmd_args.rep_token,
         'direction_method': cmd_args.direction_method,
+        'steering_unnormalized': cmd_args.steering_unnormalized,
         'loss_function': cmd_args.loss_function,
         'steering_probability': cmd_args.steering_probability,
         'steering_coeff_range': cmd_args.steering_coeff_range,

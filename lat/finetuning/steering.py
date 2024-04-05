@@ -77,9 +77,17 @@ class Steering:
 		self.hidden_layers = list(range(-1, -self.model.config.num_hidden_layers, -1))
 		self.n_difference = 1
 		self.direction_method = custom_args["direction_method"]
+		if custom_args["steering_unnormalized"] and self.direction_method == "pca":
+			with open(f"{custom_args['base_directory']}/lat/finetuning/steering_data/norms_llama-2-7b.json", "r") as f:
+				self.norms_dict = json.load(f)
+		else:
+			self.norms_dict = None
 		self.repe_key = f"rep_token_{self.rep_token}_hidden_layers_{self.hidden_layers[0]},{self.hidden_layers[-1]}_n_difference_{self.n_difference}_direction_method_{self.direction_method}"
+		if custom_args["steering_unnormalized"] and self.direction_method == "pca":
+			self.repe_key += "_unnormalized"
 		if self.rep_token == "none":
 			self.rep_token = None
+
 		# account for the previous code
 		if (self.hidden_layers ==list(range(-1, -self.model.config.num_hidden_layers, -1)) 
 	        and self.n_difference == 1 and self.direction_method == 'pca' and self.rep_token == -1):
@@ -150,7 +158,17 @@ class Steering:
 			if start_layer != -11 and end_layer != -30:
 				self.repe_key += f"_start_layer_{start_layer}_end_layer_{end_layer}"
 		else:
+			start_layer, end_layer = -11, -30
 			self.layer_id = list(range(-11, -30, -1))
+		self.start_layer, self.end_layer = start_layer, end_layer
+			
+		self.decay_end_layer = end_layer + 1
+		self.decay_start_layer = -15
+		self.decay_range_1 = abs(start_layer - self.decay_start_layer)
+		self.decay_range_2 = abs(self.decay_end_layer - self.decay_start_layer)
+		if custom_args['decay_coefficient']:
+			self.repe_key += f"_decay_coefficient_layer{self.decay_start_layer}"
+
 		self.block_name = "decoder_block"
 		self.token_pos = custom_args['token_pos']
 		self.normalize = custom_args['normalize']
@@ -222,11 +240,21 @@ class Steering:
 
 		activations = {}
 		for layer in layer_id:
+			layer_id = int(layer)
+			if self.decay_start_layer <= layer_id:
+				decay_factor = (abs(layer_id - self.start_layer) / self.decay_range_1)
+			else:
+				decay_factor = (abs(layer_id - self.decay_end_layer) / self.decay_range_2)
+            # activations = steering.get_shift(coeff=custom_args['steering_coeff'], layer_id=layer_ids, mode="test", num_pairs=200)
 			if self.custom_args["buffer_size"] > 0:
 				self.store_shift(layer, rep_reader.directions[layer] * rep_reader.direction_signs[layer])
 				activations[layer] = torch.tensor(coeff * self.sample_from_buffer(layer)).to(self.model.device).half()
 			else:
 				activations[layer] = torch.tensor(coeff * rep_reader.directions[layer] * rep_reader.direction_signs[layer]).to(self.model.device).half()
+			if self.norms_dict:
+				activations[layer] * self.norms_dict[str(layer)]
+			if self.custom_args["decay_coefficient"]:
+				activations[layer] = activations[layer] * decay_factor
 
 		return activations
 
