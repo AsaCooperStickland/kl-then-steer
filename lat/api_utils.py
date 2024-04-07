@@ -79,7 +79,7 @@ def extract_score(classification_str):
     return None  # or return 0 or any default value
 
 
-do_cache = True
+do_cache = False
 if do_cache:
     # load cache if it exists
     print("loading cache...")

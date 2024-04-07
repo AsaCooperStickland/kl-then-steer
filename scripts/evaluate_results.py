@@ -44,6 +44,8 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
         results_prefix += f"_{args.direction_method}"
     if args.steering_unnormalized:
         results_prefix += "_unnormalized"
+    if args.decay_coefficient:
+        results_prefix += "_decay"
     categorized_results_file = f"{results_prefix}_bs1.json"
     if use_existing and os.path.exists(categorized_results_file):
         with open(categorized_results_file, "r") as f:
@@ -285,6 +287,7 @@ def main():
     parser.add_argument("--no_filter_test_set", action="store_true", help="Overwrite existing categorized results.")
     parser.add_argument("--direction_method", type=str, help="The method used to steer the model.", choices=["pca", "random", "cluster_mean"], default="pca")
     parser.add_argument("--steering_unnormalized", action="store_true", help="Use unnormalized steering vectors.")
+    parser.add_argument("--decay_coefficient", action="store_true", help="Use unnormalized steering vectors.")
     parser.add_argument("--evaluation_type", type=str, default="full",
                         help="The type of evaluation to perform.", choices=["full", "restricted", "emails"])
     args = parser.parse_args()
@@ -307,6 +310,8 @@ def main():
         evaluated_multipliers = [-1.5, -1.0, 0.0, 1.0, 1.5]
         if args.steering_unnormalized:
             evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
+            if args.direction_method == "cluster_mean":
+                evaluated_multipliers = [-1.0, -0.75, -0.5, -0.25, -0.12, 0.12, 0.25, 0.5, 0.75, 1.0]
         # evaluated_multipliers = [0.0]
         # evaluated_multipliers = [1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -391,6 +396,8 @@ def main():
                     results_type += f"_{args.direction_method}"
                 if args.steering_unnormalized:
                     results_type += "_unnormalized"
+                if args.decay_coefficient:
+                    results_type += "_decay"
                 results_location = f"{directory}/{results_type}_results_bs1.json"
                 # print(f"ResultsFun {results_type} from model {model} with multiplier {evaluated_multiplier}.{results_location}")
                 if os.path.exists(results_location):
@@ -411,6 +418,8 @@ def main():
                     results_prefix += f"_{args.direction_method}"
                 if args.steering_unnormalized:
                     results_prefix += "_unnormalized"
+                if args.decay_coefficient:
+                    results_prefix += "_decay"
                 categorized_results_file = f"{results_prefix}_bs1.json"
                 # print(f"Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if overwrite or not os.path.exists(categorized_results_file):
