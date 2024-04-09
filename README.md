@@ -17,6 +17,8 @@ wandb login
 
 You may also need to convert your old cache `cache.json` to an sqlite database with `scripts/convert_cache.py`.
 
+To install the `representation-engineering` submodule, run `git submodule update --init --recursive`, then `cd representation-engineering` and `pip install -e .`.
+
 ## Usage
 ```
 python lat/finetuning/finetune.py [--flash_attn]
