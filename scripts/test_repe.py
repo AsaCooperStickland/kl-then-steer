@@ -81,8 +81,11 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     if custom_args['steering_unnormalized']:
         multipliers = [-0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5]
         if custom_args["direction_method"] == "cluster_mean":
-            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
-        multipliers = [0.0]
+            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
+            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, 0.0, 0.15, 0.25, 0.5, 0.75, 1.0]
+            multipliers = [-1.0, -0.75, 0.75, 1.0]
+            multipliers = [-1.5]
+        # multipliers = [0.0]
     else:
         multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
     for multiplier in multipliers:
