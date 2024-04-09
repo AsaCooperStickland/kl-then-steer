@@ -1,6 +1,6 @@
 [submodule "FastChat"]
 	path = FastChat
 	url = git@github.com:AsaCooperStickland/FastChat.git
-[submodule "representation"]
-	path = representation
-	url = git@github.com:AsaCooperStickland/representation-engineering.git
+[submodule "representation-engineering"]
+	path = representation-engineering
+	url = https://github.com/alexlyzhov/representation-engineering

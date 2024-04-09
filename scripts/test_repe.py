@@ -42,6 +42,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         results_prefix += "unnormalized_"
     if start_layer != -11 and end_layer != -30:
         results_prefix += f"layers_{start_layer}_{end_layer}_"
+    if custom_args["decay_coefficient"]:
+        results_prefix += f"decay_"
     results_file = f"{results_prefix}results_bs1.json"
     if custom_args["overwrite_results"]:
         existing_results = {}
@@ -71,14 +73,19 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         # rror: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first
     if custom_args['direction_method'] == 'pca' and custom_args['steering_unnormalized']:
         print("Unnormalizing raw pca activations")
-        raw_activations = {k: v * norms_dict[str(k)] for k, v in raw_activations.items()}
+        if trainer.steering.norms_dict is None:
+            print("Unnormalizing raw pca activations in test_repe.py")
+            raw_activations = {k: v * norms_dict[str(k)] for k, v in raw_activations.items()}
 
     # Loop through each multiplier
     if custom_args['steering_unnormalized']:
         multipliers = [-0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5]
-        # multipliers = [0.0]
         if custom_args["direction_method"] == "cluster_mean":
-            multipliers = [1.0, 0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
+            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
+            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, 0.0, 0.15, 0.25, 0.5, 0.75, 1.0]
+            multipliers = [-1.0, -0.75, 0.75, 1.0]
+            multipliers = [-1.5]
+        # multipliers = [0.0]
     else:
         multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
     for multiplier in multipliers:
@@ -277,6 +284,7 @@ def main():
     parser.add_argument('--direction_method', default='pca',
                         choices=['random', 'pca', 'cluster_mean'])
     parser.add_argument('--steering_unnormalized', action='store_true')
+    parser.add_argument('--decay_coefficient', action='store_true')
     parser.add_argument('--samples_freq', default=1000, type=int)  # measured in training steps
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
@@ -314,6 +322,7 @@ def main():
         'end_layer': cmd_args.end_layer,
         'loss_function': "vanilla",
         'steering_coeff_range': "positive",
+        "decay_coefficient": cmd_args.decay_coefficient,
         'samples_freq': cmd_args.samples_freq,
         'run_name': cmd_args.run_name,
         'mix_with_clean_data': False,

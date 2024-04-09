@@ -25,19 +25,27 @@ echo "Working concepts loop"
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data ; done; done ;
 
 ## bias
-for d in bias_mmlu bias_truthfulqa bias_hellaswag bias_logiqa ; do
+# for d in bias_mmlu bias_truthfulqa bias_hellaswag bias_logiqa ; do
+for d in bias_truthfulqa bias_logiqa ; do
 for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in bias_mmlu_suggested_answer bias_logiqa_suggested_answer bias_hellaswag_suggested_answer bias_truthfulqa_suggested_answer  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/cot-transparency/dataset_dumps/test/ bias -11 -30 $d ; done; done ; done
 # for d in bias_logiqa ; do
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in bias_mmlu_suggested_answer bias_logiqa_suggested_answer bias_hellaswag_suggested_answer bias_truthfulqa_suggested_answer  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/cot-transparency/dataset_dumps/test/ bias -11 -30 $d ; done; done ; done
 
 ## toxicity
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -21  -30 ; done; done ;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -6  -15 ; done; done ;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11  -20 ; done; done ;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -16  -25 ; done; done ;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -1 -10 ; done; done ;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
-for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -21  -30 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -6  -15 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11  -20 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -16  -25 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -1 -10 ; done; done ;
+
+
+
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
+
+
+
+
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emotions_surprise ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/datasets/ big ; done; done ;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in large_scale_concept_crime large_scale_concept_criminal large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_sleazy large_scale_concept_exploitative large_scale_concept_mean  large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/datasets/ big ; done; done ;
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big ; done; done ;
@@ -65,4 +73,12 @@ base_model=/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf
 # for l in run2_lora_persuasion_0.5 run2_lora_no_steer run2_lora_persuasion_working_concepts_0.5 run2_lora_working_concepts_0.5 run2_ppo_no_steer run2_ppo_no_steer_lr1e-4 run2_lora_large_scale_concept_0.5 run2_lora_kl_large_scale_concept_0.5 ; do
 # for l in run2_ppo_working_concepts_0.5 run2_lora_kl_lr_5e-5_working_concepts_0.5 run2_lora_kl_lr_1e-5_working_concepts_0.5 run2_lora_kl_lr_5e-5_large_scale_concept_0.5 run2_lora_kl_lr_1e-5_large_scale_concept_0.5 run2_lora_kl_lr_5e-5_working_concepts_0.125 run2_lora_kl_lr_1e-5_working_concepts_0.125 run2_lora_kl_lr_5e-5_large_scale_concept_0.125 run2_lora_kl_lr_1e-5_large_scale_concept_0.125 ; do
 # for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora ; done; done ;
+# done
+
+# for l in run2_lora_kl_lr_5e-5_large_scale_concept_0.0_pca run2_lora_kl_lr_5e-5_large_scale_concept_0.125_pca run2_lora_kl_lr_5e-5_working_concepts_0.0_pca run2_lora_kl_lr_5e-5_working_concepts_0.125_pca ; do
+# for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora -11 -30 pca ; done; done ;
+# done
+
+# for l in run2_lora_kl_lr_5e-5_large_scale_concept_0.0_mean run2_lora_kl_lr_5e-5_large_scale_concept_0.125_mean run2_lora_kl_lr_5e-5_working_concepts_0.0_mean run2_lora_kl_lr_5e-5_working_concepts_0.125_mean ; do
+# for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora -11 -30 cluster_mean ; done; done ;
 # done
