@@ -14,7 +14,7 @@ from transformers import Seq2SeqTrainingArguments
 from llmtuner.model import load_model_and_tokenizer
 from llmtuner.hparams import get_train_args
 from llmtuner.extras.callbacks import LogCallback
-from lat.utils import system_prompt, data_path, jailbreaks_path
+from lat.utils import jailbreaks_path, alternative_system_prompts
 from lat.format_utils import prompt_format
 from lat.finetuning.trainer import SteeringTrainer
 from lat.finetuning.steering import Steering
@@ -44,6 +44,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         results_prefix += f"layers_{start_layer}_{end_layer}_"
     if custom_args["decay_coefficient"]:
         results_prefix += f"decay_"
+    if custom_args["alternative_system_prompt"] is not None:
+        results_prefix += f"alt_prompt_{custom_args['alternative_system_prompt']}_"
     results_file = f"{results_prefix}results_bs1.json"
     if custom_args["overwrite_results"]:
         existing_results = {}
@@ -81,13 +83,23 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     if custom_args['steering_unnormalized']:
         multipliers = [-0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5]
         if custom_args["direction_method"] == "cluster_mean":
-            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
-            multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, 0.0, 0.15, 0.25, 0.5, 0.75, 1.0]
-            multipliers = [-1.0, -0.75, 0.75, 1.0]
-            multipliers = [-1.5]
+            # multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
+            multipliers = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
+            if custom_args["alternative_system_prompt"] is not None:
+                multipliers = [-0.25, -0.12, 0.0, 0.12, 0.25]
+            # multipliers = [-1.0, -0.75, 0.75, 1.0]
+            # multipliers = [-0.5, -0.75]
+            # multipliers = [0.5]
         # multipliers = [0.0]
     else:
         multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
+    
+    existing_multipliers_not_being_generated = set(existing_results.keys()) - set(multipliers)
+    if len(existing_multipliers_not_being_generated) > 0:
+        print(f"Existing multipliers {existing_multipliers_not_being_generated}")
+        for multiplier in existing_multipliers_not_being_generated:
+            all_results.append({"multiplier": multiplier, "answers": existing_results[multiplier]})
+    
     for multiplier in multipliers:
         print(f"Generating with multiplier {multiplier}")
         answers = []
@@ -114,6 +126,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             print(f"Generating for {len(new_questions)} new questions")
         else:
             new_questions = deepcopy(questions)
+            print(len(new_questions))
 
         # Batch processing of questions
         for i in tqdm(range(0, len(new_questions), batch_size)):
@@ -200,13 +213,18 @@ def run_generation(
         file_path = f"{custom_args['base_directory']}/datasets/refusal/ultra_filtered_questions.jsonl"
     else:
         file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
+
+    if custom_args['alternative_system_prompt'] is not None:
+        alternative_system_prompt = alternative_system_prompts[str(custom_args['alternative_system_prompt'])]
+    else:
+        alternative_system_prompt = None
     
     # Open the JSONL file and extract questions.
     if "bias" not in custom_args['test_setting']:
         with jsonlines.open(file_path) as reader:
             for item in reader:
                 if 'question' in item:
-                    item["question"] = prompt_format(item["question"])
+                    item["question"] = prompt_format(item["question"], alternative_system_prompt=alternative_system_prompt)
                     questions.append(item)
 
     if custom_args['test_setting'] == "manual_jailbreaks":
@@ -237,11 +255,11 @@ def run_generation(
                 with jsonlines.open(os.path.join(custom_args["bias_path"], file_name)) as reader:
                     for item in reader:
                         if 'original_question' in item:
-                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"")
+                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"", alternative_system_prompt=alternative_system_prompt)
                             unbiased_questions.append({"question": item["question"], "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                         if 'biased_question' in item:
                             biased_question_content = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\".", "").replace("It's very important that you stick to this format.", "").replace("\n\nLet's think step by step:", "").rstrip() + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\""
-                            biased_questions.append({"question": prompt_format(biased_question_content), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
+                            biased_questions.append({"question": prompt_format(biased_question_content, alternative_system_prompt=alternative_system_prompt), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                 
                 generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
                 generate_with_vector(trainer, tokenizer, unbiased_questions, f"{dataset}_{bias_type}_unbiased", custom_args, question_type=f"{dataset}_{bias_type}_unbiased_")
@@ -290,6 +308,7 @@ def main():
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--steering_coeff', type=float, default=None)
     parser.add_argument('--buffer_size', type=int, default=0)
+    parser.add_argument('--alternative_system_prompt', type=int, default=None, choices=[1, 2, 3])
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     
@@ -331,6 +350,7 @@ def main():
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
         "overwrite_results": cmd_args.overwrite_results,
         "merge_adapter": cmd_args.finetuning_type == "lora",
+        "alternative_system_prompt": cmd_args.alternative_system_prompt,
     }
 
     input_args = {

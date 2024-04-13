@@ -9,6 +9,7 @@ from lat.utils import system_prompt
 
 random.seed(27)
 
+
 def json_to_questions(json_path: str) -> list:
     questions = []
     with open(json_path, 'r') as file:
@@ -18,22 +19,29 @@ def json_to_questions(json_path: str) -> list:
     return questions
 
 
-def prompt_format(instruction, template="llama2chatsimple"):
+def prompt_format(instruction, template="llama2chatsimple", alternative_system_prompt=None):
     assert template in ["llama2chatsimple", "chatml"]
+    system_prompt_used = system_prompt if alternative_system_prompt is None else alternative_system_prompt
     if template == "llama2chatsimple":
         B_INST, E_INST = "[INST]", "[/INST]"
         B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-        dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
+        dialog_content = B_SYS + system_prompt_used + E_SYS + instruction.strip()
         dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
     elif template == "chatml":
         B_INST, E_INST = "<|im_start|>user\n", "<|im_end|>\n<|im_start|>assistant\n"
         B_SYS, E_SYS = "<|im_start|>system\n", "<|im_end|>\n"
-        dialog_content = B_SYS + system_prompt + E_SYS + instruction.strip()
+        dialog_content = B_SYS + system_prompt_used + E_SYS + instruction.strip()
         dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
     else:
         raise ValueError
         
     return dialog_content
+
+
+def check_source_for_refusal(text):
+    if ("gpt" in text or "claude" in text or "mistral" in text):
+        return True
+    return False
 
 
 class QuestionReader:
@@ -209,6 +217,85 @@ class QuestionAugmenter:
 
     def save_mappings(self):
         with open(os.path.join(self.dataset_path, "refusal/question_mappings.json"), "w") as file:
+            json.dump(self.mapping, file, indent=4)
+
+
+class ProbeQuestionAugmenter:
+    def __init__(self, dataset_path, jailbreaks_path, jinja_directory, jinja_subset="test", questions_file="probing/training/training_persuasion0.50_refusal0.50"):
+        self.reader = QuestionReader(dataset_path)
+        self.dataset_path = dataset_path
+        self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
+        random.shuffle(self.jinja_files)
+        if jinja_subset == "test":
+            self.jinja_files = self.jinja_files[:5]
+        else:
+            self.jinja_files = self.jinja_files[5:]
+        with open(jailbreaks_path, "r") as f:
+            self.jailbreaks = json.load(f)
+        self.jailbreaks = [(item["name"], item["prompt"]) for item in self.jailbreaks]
+        self.jinja_formatter = Formatter()
+        self.addition_formatter = AdditionFormatter()
+        self.mapping = {}
+        self.initial_questions = self.reader.read_initial_questions(f"{questions_file}.jsonl")
+        self.augmented_categories = set([item["source"] for item in self.initial_questions])
+        self.questions_file = questions_file
+    
+    def get_all_category_keys(self):
+        category_key_store = defaultdict(list)
+        toxic_categories = list(set([item["source"] for item in self.initial_questions if check_source_for_refusal(item["source"])]))
+        normal_categories = list(set([item["source"] for item in self.initial_questions if not check_source_for_refusal(item["source"])]))
+        category_key_store["toxic_categories"] = toxic_categories
+        category_key_store["normal_categories"] = normal_categories
+        category_key_store["all_toxic_categories"] = toxic_categories
+        category_key_store["all_normal_categories"] = normal_categories
+        for category in self.augmented_categories:
+            vanilla_jinja_keys = self.jinja_formatter.get_category_keys(self.jinja_files, category, "initial")
+            if category in toxic_categories:
+                category_key_store["toxic_jinja_categories"].extend(vanilla_jinja_keys)
+                category_key_store["all_toxic_categories"].extend(vanilla_jinja_keys)
+            else:
+                category_key_store["normal_jinja_categories"].extend(vanilla_jinja_keys)
+                category_key_store["all_normal_categories"].extend(vanilla_jinja_keys)
+            vanilla_jailbreak_keys = self.addition_formatter.get_category_keys(self.jailbreaks, category, "initial")
+            if category in toxic_categories:
+                category_key_store["toxic_jailbreak_categories"].extend(vanilla_jailbreak_keys)
+                category_key_store["all_toxic_categories"].extend(vanilla_jailbreak_keys)
+            else:
+                category_key_store["normal_jailbreak_categories"].extend(vanilla_jailbreak_keys)
+                category_key_store["all_normal_categories"].extend(vanilla_jailbreak_keys)
+        return category_key_store
+
+
+    def augment_questions(self):
+        # print(self.jinja_files)
+        ultra_filtered_questions = [item for item in self.initial_questions if item["category"] in self.augmented_categories]
+        print(f"Ultra filtered questions: {len(ultra_filtered_questions)}")
+        ultra_filtered_questions_file_path = os.path.join(self.dataset_path, f"{self.questions_file}_augmented.jsonl")
+        with jsonlines.open(ultra_filtered_questions_file_path, mode='w') as writer:
+            writer.write_all(ultra_filtered_questions)
+        
+        for category in self.augmented_categories:
+            questions = [item for item in self.initial_questions if item["category"] == category]
+            augmented_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, "initial", augment_all=False)
+            self.mapping.update(mapping)
+            self.initial_questions.extend(augmented_questions)
+            jailbreak_questions, mapping = self.addition_formatter.format_questions(self.jailbreaks, questions, category, "initial", augment_all=False)
+            self.mapping.update(mapping)
+            self.initial_questions.extend(jailbreak_questions)
+
+        # Save the augmented questions
+        print(f"initial_questions after augmentation: {len(self.initial_questions)}")
+        
+        category_keys = self.get_all_category_keys()
+        data_dictionary = {}
+        for key in category_keys["all_toxic_categories"] + category_keys["all_normal_categories"]:
+            data_dictionary[key] = [item for item in self.initial_questions if item["category"] == key]
+        augmented_questions_file_path = os.path.join(self.dataset_path, f"{self.questions_file}_questions.json")
+        with open(augmented_questions_file_path, "w") as file:
+            json.dump(data_dictionary, file, indent=4)
+
+    def save_mappings(self):
+        with open(os.path.join(self.dataset_path, "probing/question_mappings.json"), "w") as file:
             json.dump(self.mapping, file, indent=4)
 
 

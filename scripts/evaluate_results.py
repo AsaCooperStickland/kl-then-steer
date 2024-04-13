@@ -315,7 +315,7 @@ def main():
                 evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
                 evaluated_multipliers = [0.25, 0.12, 0.09, 0.6]
             if args.direction_method == "cluster_mean":
-                evaluated_multipliers = [-1.0, -0.75, -0.5, -0.25, -0.12, 0.12, 0.25, 0.5, 0.75, 1.0]
+                evaluated_multipliers = [-1.0, -0.75, -0.5, -0.25, -0.12, 0.0, 0.12, 0.25, 0.5, 0.75, 1.0]
         # evaluated_multipliers = [0.0]
         # evaluated_multipliers = [1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -349,7 +349,7 @@ def main():
         # models += ["run2_lora_kl_lr_1e-5_working_concepts_0.125", "run2_lora_kl_lr_5e-5_working_concepts_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.5", "run2_lora_kl_lr_5e-5_large_scale_concept_0.5"]
-        models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125_pca", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125_pca"]
+        models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean", "run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean"]
         # for steering_fraction in [0.125, 0.25, 0.5]:
         # for steering_fraction in [0.5]:
         #     # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
