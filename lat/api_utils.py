@@ -79,11 +79,11 @@ def extract_score(classification_str):
     return None  # or return 0 or any default value
 
 
-do_cache = True
+do_cache = False
 if do_cache:
     # load cache if it exists
     print("loading cache...")
-    CACHE = ModelResponseCache(db_path='model_responses_cache.db')
+    CACHE = ModelResponseCache(db_path='model_responses_cache2.db')
     print("cache loaded")
 else:
     CACHE = None
@@ -102,10 +102,16 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
 
     for prompts in tqdm(batched_prompts):
         # Check cache first
-        cached_responses = [CACHE.get_cached_response(model_name, prompt)
-                            for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
-        cached_prompts = [prompt for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
-        uncached_prompts = [prompt for prompt in prompts if not CACHE.is_key_stored(model_name, prompt)]
+        if CACHE is None:
+            cached_responses = []
+            cached_prompts = []
+            uncached_prompts = prompts
+        else:
+            cached_responses = [CACHE.get_cached_response(model_name, prompt)
+                                for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
+            cached_prompts = [prompt for prompt in prompts if CACHE.is_key_stored(model_name, prompt)]
+            print(f"number of cached prompts: {len(cached_prompts)}")
+            uncached_prompts = [prompt for prompt in prompts if not CACHE.is_key_stored(model_name, prompt)]
 
         if uncached_prompts:
             model_responses = call_model_with_retries(
@@ -117,7 +123,8 @@ def call_model_with_retries_batched(batched_prompts, model_name, call_type, temp
             
             for prompt, response in zip(uncached_prompts, model_responses):
                 response = get_generic_response(response, model_name)
-                CACHE.cache_response(model_name, prompt, response)
+                if CACHE is not None:
+                    CACHE.cache_response(model_name, prompt, response)
                 responses.append(response)
                 
         for cached_prompt, cached_response in zip(cached_prompts, cached_responses):

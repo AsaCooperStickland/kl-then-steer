@@ -5,6 +5,7 @@ import os
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, pipeline, AutoModelForCausalLM
+from trl import AutoModelForCausalLMWithValueHead
 
 from lat.finetuning.steering_data import *
 
@@ -23,9 +24,17 @@ def create_labels(data):
 	data = [prompt for pair in data for prompt in pair]
 	return {'data': data, 'labels': train_labels}
 
-def preprocess_steering_data(data):
-	user_tag = "[INST]"
-	assistant_tag = "[/INST]"
+def preprocess_steering_data(data, template="llama2chatsimple"):
+	assert template in ["llama2chatsimple", "chatml"]
+	if template == "llama2chatsimple":
+		user_tag = "[INST]"
+		assistant_tag = "[/INST]"
+	elif template == "chatml":
+		user_tag = "<|im_start|>user\n"
+		assistant_tag = "<|im_end|>\n<|im_start|>assistant\n"
+	else:
+		raise ValueError
+		
 	output_data = {}
 	for category, pairs in data.items():
 		pairs = [[f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}' for user_prompt, assistant_prompt in pair]
@@ -79,7 +88,13 @@ class Steering:
 	def __init__(self, dataset_name, model_arg, tokenizer_arg, data_dir, custom_args, 
 			  optimizer=None, expunge=True, preserve_categories=True, n_new=None, optimizer_frequency=None):
 		self.custom_args = custom_args
-		self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
+		if isinstance(model_arg, AutoModelForCausalLMWithValueHead):
+			self.model = model_arg.pretrained_model.model if custom_args['finetuning_type'] == 'lora' else model_arg.pretrained_model
+			print(self.model)
+		else:
+			self.model = model_arg.model if custom_args['finetuning_type'] == 'lora' else model_arg
+		if custom_args['merge_adapter']:
+			self.model = model_arg
 
 		# self.tokenizer = tokenizer
 		config_kwargs = {'trust_remote_code': True, 'cache_dir': None, 'revision': 'main', 'token': None}
@@ -96,9 +111,17 @@ class Steering:
 		self.hidden_layers = list(range(-1, -self.model.config.num_hidden_layers, -1))
 		self.n_difference = 1
 		self.direction_method = custom_args["direction_method"]
+		if custom_args["steering_unnormalized"] and self.direction_method == "pca":
+			with open(f"{custom_args['base_directory']}/lat/finetuning/steering_data/norms_llama-2-7b.json", "r") as f:
+				self.norms_dict = json.load(f)
+		else:
+			self.norms_dict = None
 		self.repe_key = f"rep_token_{self.rep_token}_hidden_layers_{self.hidden_layers[0]},{self.hidden_layers[-1]}_n_difference_{self.n_difference}_direction_method_{self.direction_method}"
+		if custom_args["steering_unnormalized"] and self.direction_method == "pca":
+			self.repe_key += "_unnormalized"
 		if self.rep_token == "none":
 			self.rep_token = None
+
 		# account for the previous code
 		if (self.hidden_layers ==list(range(-1, -self.model.config.num_hidden_layers, -1)) 
 	        and self.n_difference == 1 and self.direction_method == 'pca' and self.rep_token == -1):
@@ -161,9 +184,16 @@ class Steering:
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_question_pairs.json")
 			elif dataset_name == 'filtered_questions_style_question_pairs':
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/filtered_questions_style_question_pairs.json")
+			elif "bias" in dataset_name:
+				_, data_source, *bias_type = dataset_name.split('_')
+				# bias type may be a list, turn back to a string
+				if isinstance(bias_type, list):
+					bias_type = "_".join(bias_type)
+				path = os.path.join(bias_type, f"{data_source}_{bias_type}.jsonl")
+				data = get_bias_pairs(data_dir, mode=mode, path=path, augment_bad_answer=True)
 			else:
 				raise ValueError(f"Invalid dataset name: {dataset_name}")
-			data = preprocess_steering_data(data)
+			data = preprocess_steering_data(data) # add template
 			datasets.append(data)
 		
 		if self.optimizer:
@@ -177,9 +207,26 @@ class Steering:
 				self.optimizer_frequency = None #Will be determined within do_optimize
 		self.dataset_name = dataset_name
 		self.train_data, self.val_data = datasets
+		if 'start_layer' in custom_args and 'end_layer' in custom_args:
+			start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
+			self.layer_id = list(range(start_layer, end_layer, -1))
+			if start_layer != -11 and end_layer != -30:
+				self.repe_key += f"_start_layer_{start_layer}_end_layer_{end_layer}"
+		else:
+			start_layer, end_layer = -11, -30
+			self.layer_id = list(range(-11, -30, -1))
+		self.start_layer, self.end_layer = start_layer, end_layer
+			
+		self.decay_end_layer = end_layer + 1
+		self.decay_start_layer = -15
+		self.decay_range_1 = abs(start_layer - self.decay_start_layer)
+		self.decay_range_2 = abs(self.decay_end_layer - self.decay_start_layer)
+		if custom_args['decay_coefficient']:
+			self.repe_key += f"_decay_coefficient_layer{self.decay_start_layer}"
 
-		self.layer_id = list(range(-11, -30, -1))
 		self.block_name = "decoder_block"
+		self.token_pos = custom_args['token_pos']
+		self.normalize = custom_args['normalize']
 
 		self.wrapped_model = rep_control_reading_vec.WrappedReadingVecModel(self.model, self.tokenizer)
 		self.wrapped_model.unwrap()
@@ -252,11 +299,21 @@ class Steering:
 
 		activations = {}
 		for layer in layer_id:
+			layer_id = int(layer)
+			if self.decay_start_layer <= layer_id:
+				decay_factor = (abs(layer_id - self.start_layer) / self.decay_range_1)
+			else:
+				decay_factor = (abs(layer_id - self.decay_end_layer) / self.decay_range_2)
+            # activations = steering.get_shift(coeff=custom_args['steering_coeff'], layer_id=layer_ids, mode="test", num_pairs=200)
 			if self.custom_args["buffer_size"] > 0:
 				self.store_shift(layer, rep_reader.directions[layer] * rep_reader.direction_signs[layer])
 				activations[layer] = torch.tensor(coeff * self.sample_from_buffer(layer)).to(self.model.device).half()
 			else:
 				activations[layer] = torch.tensor(coeff * rep_reader.directions[layer] * rep_reader.direction_signs[layer]).to(self.model.device).half()
+			if self.norms_dict:
+				activations[layer] * self.norms_dict[str(layer)]
+			if self.custom_args["decay_coefficient"]:
+				activations[layer] = activations[layer] * decay_factor
 
 		return activations
 
@@ -289,7 +346,7 @@ class Steering:
 		self.wrapped_model.reset()
 		for key in activations:
 			activations[key] = activations[key].to(torch.bfloat16)
-		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name)
+		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos, normalize=self.normalize)
 		self.wrapped_model.to(torch.bfloat16)
 
 	def log(self, loss):

@@ -29,22 +29,31 @@ def main():
     parser.add_argument('--flash_attn', action='store_true')
     parser.add_argument('--stage', default='sft', choices=['sft', 'ppo'])
     parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
+<<<<<<< HEAD
     parser.add_argument('--steering_data_path', default="/scratch/jp6263/latent-adversarial-training/datasets")
     parser.add_argument('--dataset_dir', default='/scratch/jp6263/latent-adversarial-training/lat/finetuning/finetuning_data')
+=======
+    parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
+    parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
+    parser.add_argument('--base_directory', default='/scratch/alc9734/latent-adversarial-training/')
+>>>>>>> 33429e1c15b0c72dbecdf7d410aa83c5b8f21fdb
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=1)
     parser.add_argument('--samples_dir', default='/scratch/jp6263/latent-adversarial-training/samples')
     parser.add_argument('--samples_freq', default=8000, type=int)  # measured in training steps
     parser.add_argument('--batch_size', default=2, type=int)  # measured in training steps
+    parser.add_argument('--learning_rate', default=None, type=float)
     parser.add_argument('--run_name', default=datetime.now().strftime("%Y-%m-%d_%H:%M"))
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--buffer_size', type=int, default=0)
     parser.add_argument('--rep_token', default=-1)
     parser.add_argument('--direction_method', default='pca', choices=['random', 'pca', 'cluster_mean'])
+    parser.add_argument('--steering_unnormalized', action='store_true')
     parser.add_argument('--loss_function', default='vanilla', choices=['vanilla', 'kl'])
     parser.add_argument('--steering_coeff', type=float, default=None)
     parser.add_argument('--steering_coeff_range', type=str, default='positive', choices=['positive', 'both'])
+    parser.add_argument('--token_pos', type=str, default=None)
     parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--optimize_steering', action='store_true')
@@ -65,6 +74,7 @@ def main():
 
     custom_args = {
         "steering_data_path": cmd_args.steering_data_path,
+        "base_directory": cmd_args.base_directory,
         'steering_dataset': cmd_args.steering_dataset,
         'do_steer': cmd_args.do_steer,
         'optimize_steering': cmd_args.optimize_steering,
@@ -74,13 +84,24 @@ def main():
         'run_name': cmd_args.run_name,
         'rep_token': cmd_args.rep_token,
         'direction_method': cmd_args.direction_method,
+        'steering_unnormalized': cmd_args.steering_unnormalized,
         'loss_function': cmd_args.loss_function,
         'steering_probability': cmd_args.steering_probability,
         'steering_coeff_range': cmd_args.steering_coeff_range,
         'subsample_steering_data': False,
+        'token_pos': cmd_args.token_pos,
+        'normalize': False,
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }
-
+    
+    if cmd_args.stage == "sft":
+        gradient_accumulation_steps = 2 if cmd_args.finetuning_type == "lora" else 4
+    else:
+        gradient_accumulation_steps = 2 if cmd_args.finetuning_type == "lora" else 4
+    if cmd_args.learning_rate is not None:
+        learning_rate = cmd_args.learning_rate
+    else:
+        learning_rate = 5e-4 if cmd_args.stage == "sft" else 1e-5
     input_args = {
         "stage": cmd_args.stage,
         "model_name_or_path": "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf",
@@ -90,17 +111,19 @@ def main():
         # "dataset": "alpaca_gpt4_en",
         "dataset": cmd_args.dataset,
         "finetuning_type": cmd_args.finetuning_type,
-        "lora_target": "q_proj,v_proj",
+        "lora_target": "q_proj,v_proj,w_out,w_in",
+        # "use_rslora": True,
+        "lora_rank": 128,
         "output_dir": cmd_args.output_dir,
         # "output_dir": os.path.join('results', datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '_' + cmd_args.run_name),
         "overwrite_cache": True,
         "per_device_train_batch_size": cmd_args.batch_size,
         # "gradient_accumulation_steps": 4,
-        "gradient_accumulation_steps": 2 if cmd_args.finetuning_type == "lora" else 4,
+        "gradient_accumulation_steps": gradient_accumulation_steps,
         "lr_scheduler_type": "cosine",
         "logging_steps": 10,
         "save_steps": 4000,
-        "learning_rate": 5e-4 if cmd_args.stage == "sft" else 1e-4,
+        "learning_rate": learning_rate,
         "reward_model": "starling",
         'reward_model_type': 'starling',
         # "reward_model": "alikhan0100u/Llama-2-7b-oasst-preference-reward-model-adapter",
@@ -111,7 +134,7 @@ def main():
         "bf16": True,
         "overwrite_output_dir": True,
         "seed": cmd_args.seed,
-        # "neftune_noise_alpha": cmd_args.neftune_noise_alpha,
+        "neftune_noise_alpha": cmd_args.neftune_noise_alpha,
         "flash_attn": cmd_args.flash_attn,
         "val_size": 0.2,
         "do_sample": True,
