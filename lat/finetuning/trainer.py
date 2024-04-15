@@ -136,7 +136,7 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
         if self.custom_args['optimize_steering']:
-            self.steering.log(loss)
+            self.steering.log(-1*loss) #The optimizing chooses highest loss values to evolve on, so we negate loss. This assumes data will have toxic completions, and you use KL penalty.
             self.steering.do_optimize() #Called every time, but only one in every N calls actually run
 
         return (loss, outputs) if return_outputs else loss
