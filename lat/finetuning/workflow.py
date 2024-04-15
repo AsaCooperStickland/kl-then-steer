@@ -12,13 +12,9 @@ from llmtuner.train.sft.metric import ComputeMetrics
 
 from trainer import SteeringTrainer
 
-<<<<<<< HEAD
-from transformers import TrainerCallback, AutoModelForCausalLM, AutoTokenizer
-=======
 from transformers import TrainerCallback
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from transformers.integrations import is_deepspeed_zero3_enabled
->>>>>>> 33429e1c15b0c72dbecdf7d410aa83c5b8f21fdb
 import torch
 from datetime import datetime
 from steering import Steering, get_evolutionary_optimizer

@@ -29,14 +29,9 @@ def main():
     parser.add_argument('--flash_attn', action='store_true')
     parser.add_argument('--stage', default='sft', choices=['sft', 'ppo'])
     parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
-<<<<<<< HEAD
-    parser.add_argument('--steering_data_path', default="/scratch/jp6263/latent-adversarial-training/datasets")
-    parser.add_argument('--dataset_dir', default='/scratch/jp6263/latent-adversarial-training/lat/finetuning/finetuning_data')
-=======
     parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
     parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--base_directory', default='/scratch/alc9734/latent-adversarial-training/')
->>>>>>> 33429e1c15b0c72dbecdf7d410aa83c5b8f21fdb
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=1)
