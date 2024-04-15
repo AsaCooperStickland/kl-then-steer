@@ -59,6 +59,7 @@ def get_evolutionary_optimizer(model, tokenizer, weight_percentage=0.5,):
 		max_length = max(len(tokens1.input_ids[0]), len(tokens2.input_ids[0]))*1.25 #1.25 is arbitrary to allow for some increase in length following mutation
 		query = evolutionary_prompt+f"\nText 1 is ${text_parents_pair[0]}$\nText 2 is ${text_parents_pair[1]}$"
 		generation = generate_target_string(query, model, tokenizer, target_tokens=max_length)
+		print(f"Evolutionary optimization text result: {generation}")
 		if generation.count('$')>=2:
 			generation = generation[generation.index("$")+1:generation.rindex("$")]
 		else:
@@ -108,6 +109,8 @@ class Steering:
 
 		self.optimizer = optimizer #get_evolutionary_optimizer(hermes, hermes_tokenizer, weight_percentage=0.5, max_length=None)
 		if self.optimizer:
+			self.optimize_steering = True
+			self.tmp_steer_log = None
 			self.steering_log = dict()
 			self.optimizer_steps = 0
 			self.expunge = expunge
@@ -167,7 +170,7 @@ class Steering:
 			if n_new:
 					self.n_new = n_new
 			else:
-				self.n_new = 0.01*sum([len(cat) for cat in data.values()])
+				self.n_new = max(int(0.01*sum([len(cat) for cat in data.values()])),1)
 			if optimizer_frequency:
 				self.optimizer_frequency = optimizer_frequency
 			else:
@@ -296,13 +299,15 @@ class Steering:
 		:param loss: The loss value after the shift
 		'''
 		#'data' key has value of dict containing 'labels' and 'data' keys where labels value is list[list[bool,bool]] and data value is list[str]
-		for i, pair in enumerate(self.tmp_steer_log['data']['labels']):
-			first = self.tmp_steer_log['data']['data'][i*2]
-			second = self.tmp_steer_log['data']['data'][i*2+1]
-			self.steering_log.setdefault(first, {'label': pair[0], 'losses': [], 'category': self.tmp_steer_log['category']})
-			self.steering_log.setdefault(second, {'label': pair[1], 'losses': [], 'category': self.tmp_steer_log['category']})
-			self.steering_log[first]['losses'].append(loss)
-			self.steering_log[second]['losses'].append(loss)
+		if not self.tmp_steer_log is None:
+			for i, pair in enumerate(self.tmp_steer_log['data']['labels']):
+				first = self.tmp_steer_log['data']['data'][i*2]
+				second = self.tmp_steer_log['data']['data'][i*2+1]
+				self.steering_log.setdefault(first, {'label': pair[0], 'losses': [], 'category': self.tmp_steer_log['category']})
+				self.steering_log.setdefault(second, {'label': pair[1], 'losses': [], 'category': self.tmp_steer_log['category']})
+				self.steering_log[first]['losses'].append(loss)
+				self.steering_log[second]['losses'].append(loss)
+			self.tmp_steer_log = None
 		
 	def do_optimize(self,):
 		'''
@@ -316,7 +321,7 @@ class Steering:
 			return
 
 		for _, data in self.steering_log.items():
-			data['losses'] = np.mean(data['losses'])
+			data['losses'] = np.mean([d.cpu().detach() for d in data['losses']])
 
 		log_list = list(self.steering_log.items())
 
