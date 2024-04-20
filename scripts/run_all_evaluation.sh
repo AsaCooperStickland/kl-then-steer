@@ -40,8 +40,13 @@ for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in 
 
 
 
+# for s in 1 2 3 ; do
+# for s in 4 ; do
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -25 cluster_mean $s ; done; done ; done
+
+
 # for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
-# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
+# for m in /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf ; do for e in refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented refusal_data_A_B_cropped_jinja_augmented_v2 refusal_data_full_answers_jinja_augmented_v2 ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big -11 -30 ; done; done ;
 
 
 
@@ -78,7 +83,15 @@ base_model=/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf
 # for l in run2_lora_kl_lr_5e-5_large_scale_concept_0.0_pca run2_lora_kl_lr_5e-5_large_scale_concept_0.125_pca run2_lora_kl_lr_5e-5_working_concepts_0.0_pca run2_lora_kl_lr_5e-5_working_concepts_0.125_pca ; do
 # for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora -11 -30 pca ; done; done ;
 # done
+#for s in 1 2 3 ; do
+#for l in run2_lora_kl_lr_1e-5_15_large_scale_concept_0.0_mean run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean run2_lora_kl_lr_1e-5_15_working_concepts_0.0_mean run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean ; do
+#for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped refusal_data_full_answers   ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora -11 -30 cluster_mean $s ; done ; done; done ;
+#done
 
-# for l in run2_lora_kl_lr_5e-5_large_scale_concept_0.0_mean run2_lora_kl_lr_5e-5_large_scale_concept_0.125_mean run2_lora_kl_lr_5e-5_working_concepts_0.0_mean run2_lora_kl_lr_5e-5_working_concepts_0.125_mean ; do
-# for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora -11 -30 cluster_mean ; done; done ;
+# for l in run2_lora_kl_lr_1e-5_15_large_scale_concept_0.0_mean run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean run2_lora_kl_lr_1e-5_15_working_concepts_0.0_mean run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean ; do
+# for m in ${base_path}/${l} ; do for e in refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented refusal_data_A_B_cropped_jinja_augmented_v2 refusal_data_full_answers_jinja_augmented_v2 ; do sbatch submit_eval.sh $m $e /scratch/alc9734/latent-adversarial-training/lat/finetuning/steering_data big_lora -11 -30 cluster_mean ; done; done ;
+# done
+# for d in bias_truthfulqa bias_logiqa ; do
+# for l in run2_lora_kl_lr_1e-5_15_large_scale_concept_0.0_mean run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean run2_lora_kl_lr_1e-5_15_working_concepts_0.0_mean run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean ; do
+# for m in ${base_path}/${l} ; do for e in bias_mmlu_suggested_answer bias_logiqa_suggested_answer bias_hellaswag_suggested_answer bias_truthfulqa_suggested_answer  ; do sbatch submit_eval.sh $m $e /scratch/alc9734/cot-transparency/dataset_dumps/test/ bias -11 -30 $d ; done; done ; done ;
 # done
