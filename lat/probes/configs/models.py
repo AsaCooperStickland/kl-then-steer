@@ -10,7 +10,7 @@ HF_API_KEY = os.getenv("HF_TOKEN")
 @dataclass
 class model_config:
     weight_decay: float=0.001
-    model: str='llama2_7b'
+    model: str='llama2_chat_7b'
     device: str='cuda'
     seed: int=42
     single_topic_probe: bool=True
@@ -24,6 +24,10 @@ model_lookup = {'gpt2_medium':{'tl_name' : "gpt2-medium",
                                   },
                     'llama2_7b':{'hf_name' : 'meta-llama/Llama-2-7b-hf',
                                  'tl_name' : "llama-7b",
+                                 'layers' : [5, 10, 15, 20, 25, 31]
+                                  },
+                    'llama2_chat_7b':{'hf_name' : 'meta-llama/Llama-2-7b-chat-hf',
+                                 'tl_name' : "meta-llama/Llama-2-7b-chat-hf",
                                  'layers' : [5, 10, 15, 20, 25, 31]
                                   },
                     'llama2_13b':{'hf_name' : 'meta-llama/Llama-2-13b-hf',

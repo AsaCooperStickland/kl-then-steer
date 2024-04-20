@@ -318,7 +318,7 @@ def main():
         evaluated_multipliers = [-1.5, -1.0, 0.0, 1.0, 1.5]
         evaluated_multipliers = [0.0]
         if args.steering_unnormalized:
-            evaluated_multipliers = [-0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5]
+            evaluated_multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
             # evaluated_multipliers = [-0.15]
             # evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.0, 0.06, 0.09, 0.12, 0.15, 0.25]
             # evaluated_multipliers = [0.09, 0.06, -0.06, -0.09]

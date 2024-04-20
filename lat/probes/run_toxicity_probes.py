@@ -1,5 +1,6 @@
 from transformer_lens import HookedTransformer
 import json
+from collections import defaultdict
 import os
 from tqdm import tqdm
 
@@ -25,7 +26,8 @@ from utils.config_utils import *
 from utils.data_utils import *
 from utils.model_utils import *
 from configs import DataConfig, model_config, model_lookup
-from lat.format_utils import ProbeQuestionAugmenter
+from lat.format_utils import ProbeQuestionAugmenter, QuestionAugmenter
+from lat.utils import jailbreaks_path
 
 from sklearn.model_selection import train_test_split
 import random
@@ -70,11 +72,29 @@ def main(**kwargs):
     y = {}
     if data_config.toxic_data is None or data_config.normal_data is None:
         augmenter = ProbeQuestionAugmenter(dataset_path="datasets", 
-                                    jailbreaks_path="/scratch/alc9734/latent-adversarial-training/datasets/refusal/jailbreaks.json",
+                                    jailbreaks_path="/scratch/alc9734/latent-adversarial-training/datasets/refusal/jailbreaks_extra.json",
                                     jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/", jinja_subset="train", questions_file=f"probing/training/{data_config.data_type}")
         category_keys = augmenter.get_all_category_keys()
-        toxic_data = category_keys["all_toxic_categories"]
-        normal_data = category_keys["all_normal_categories"]
+        toxic_data = set(category_keys["all_toxic_categories"])
+        normal_data = set(category_keys["all_normal_categories"])
+        test_augmenter = QuestionAugmenter(dataset_path="datasets", 
+                                  jailbreaks_path=jailbreaks_path,
+                                  jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/",
+                    output_dataset_path="datasets/probing/testing")
+        test_category_keys = test_augmenter.get_all_category_keys()
+        for k, v in test_category_keys.items():
+            toxic_data.update(v)
+        output_file_path = "question"
+        mt_augmenter = ProbeQuestionAugmenter(dataset_path="FastChat/fastchat/llm_judge/data/mt_bench/", 
+                    jailbreaks_path=jailbreaks_path,
+                    jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/", jinja_subset="test", questions_file=output_file_path,
+                    output_dataset_path="datasets/probing/mt_bench", assume_normal=True)
+        mt_category_keys = mt_augmenter.get_all_category_keys()
+        for k, v in mt_category_keys.items():
+            normal_data.update(v)
+        toxic_data = list(toxic_data)
+        normal_data = list(normal_data)
+
         if data_config.toxic_data is None:
             data_config.toxic_data = toxic_data
         if data_config.normal_data is None:
@@ -82,7 +102,17 @@ def main(**kwargs):
     #Get all of the past data
     for domain in data_config.domains:
         X[domain], y[domain] = {}, {}
-        full_dataset = json.load(open(os.path.join(data_config.data_dir, domain, f'{data_config.data_type}_questions.json'), 'r'))
+        if domain == "testing":
+            full_dataset = defaultdict(list)
+            with open(os.path.join(data_config.data_dir, domain, f'augmented_questions.jsonl'), 'r') as f:
+                for line in f:
+                    line = json.loads(line)
+                    print(line)
+                    full_dataset[line['source']].append(line)
+        elif domain == "mt_bench":
+            full_dataset = json.load(open(os.path.join(data_config.data_dir, domain, f'question_questions.json'), 'r'))
+        else:
+            full_dataset = json.load(open(os.path.join(data_config.data_dir, domain, f'{data_config.data_type}_questions.json'), 'r'))
         # print(full_dataset.keys())
         # raise ValueError
         for source in data_config.toxic_data + data_config.normal_data:
@@ -98,7 +128,7 @@ def main(**kwargs):
                 os.makedirs(os.path.join(data_config.activations_dir, source, model_config.model))
             for layer in layers:
                 activations_file = os.path.join(data_config.activations_dir, source, model_config.model, f'{domain}_layer{layer}_activations.npy')
-                if Path(activations_file).exists():
+                if Path(activations_file).exists() and domain != "training":
                     print(f"Loading activations from {activations_file}")
                     X[domain][source][layer] = load_activations(activations_file)
                 else:
@@ -113,12 +143,12 @@ def main(**kwargs):
     if model_config.single_topic_probe:
         print("TRAINING SINGLE domain PROBES")
         single_topic_results = pd.DataFrame(columns = ['train_domain', 'layer', 'test_domain', 'test_score', 'train_size', 'test_size'])   
-        for domain in data_config.domains:
+        for train_domain in data_config.train_domains:
             for l in layers:
-                X_train, X_test, y_train, y_test = get_single_domain_data(X, data_config, domain, layer, model_config.seed)
+                X_train, X_test, y_train, y_test = get_single_domain_data(X, data_config, train_domain, layer, model_config.seed)
 
                 #Train probe
-                probe_path = os.path.join(probe_dir, model_config.model, f'{domain}_layer{l}_probe_l2_{model_config.weight_decay}.pt')
+                probe_path = os.path.join(probe_dir, model_config.model, f'{train_domain}_layer{l}_probe_l2_{model_config.weight_decay}.pt')
                 
                 if os.path.exists(probe_path):
                     print(f"Loading probe from {probe_path}")
@@ -130,15 +160,41 @@ def main(**kwargs):
                 score = trained_probe.score(X_test, y_test.astype(np.int64))
                 #predictions = trained_probe.predict(X_test, y_test.astype(np.int64))
                 
-                add = {'train_topic':domain,
+                add = {'train_domain': train_domain,
                         'layer':l,
-                        'test_topic':domain,
+                        'test_domain': train_domain,
                         'test_score':score,
                         'train_size': X_train.shape[0],
                         'test_size': X_test.shape[0]}
 
-                print(f"TEST ACCURACY {domain} LAYER {l}: {score}")
+                print(f"TEST ACCURACY {train_domain} LAYER {l}: {score}")
                 single_topic_results = single_topic_results._append(add, ignore_index = True)
+                for domain in data_config.test_domains:
+                    _, X_test, _, y_test = get_single_domain_data(X, data_config, domain, layer, model_config.seed, test_size=1.0)
+                    score = trained_probe.score(X_test, y_test.astype(np.int64))
+                    add = {'train_domain': train_domain,
+                            'layer':l,
+                            'test_domain':domain,
+                            'test_score':score,
+                            'train_size': X_train.shape[0],
+                            'test_size': X_test.shape[0]}
+                    print(f"TEST ACCURACY {domain} LAYER {l}: {score}")
+                    single_topic_results = single_topic_results._append(add, ignore_index = True)
+                    if domain == "testing":
+                        for source_name, sources in test_category_keys.items():
+                            _, X_test, _, y_test = get_single_domain_data(X, data_config, domain, layer, model_config.seed, test_size=1.0, custom_toxic_sources=sources)
+                            if X_test is None:
+                                print(f"Skipping {source_name}")
+                                continue
+                            score = trained_probe.score(X_test, y_test.astype(np.int64))
+                            add = {'train_domain': train_domain,
+                                    'layer':l,
+                                    'test_domain':f"{domain}_{source_name}",
+                                    'test_score':score,
+                                    'train_size': X_train.shape[0],
+                                    'test_size': X_test.shape[0]}
+                            print(f"TEST ACCURACY {source_name} LAYER {l}: {score}")
+                            single_topic_results = single_topic_results._append(add, ignore_index = True)
 
         single_topic_results.to_csv(os.path.join(results_dir, model_config.model, f'single_topic_l2_{model_config.weight_decay}_results.csv'), index = False)
     

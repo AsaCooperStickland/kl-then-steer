@@ -39,7 +39,7 @@ def prompt_format(instruction, template="llama2chatsimple", alternative_system_p
 
 
 def check_source_for_refusal(text):
-    if ("gpt" in text or "claude" in text or "mistral" in text):
+    if ("gpt" in text or "claude" in text or "mistral" in text or "Mixtral" in text):
         return True
     return False
 
@@ -50,8 +50,17 @@ class QuestionReader:
 
     def read_initial_questions(self, file_name):
         path = os.path.join(self.base_path, file_name)
+        output = []
         with jsonlines.open(path, mode='r') as reader:
-            return [item for item in reader]
+            for item in reader:
+                if "source" not in item and "question" in item:
+                    item["source"] = item["category"]
+                elif "source" not in item and "question" not in item:
+                    item["source"] = "mt_bench"
+                    item["category"] = "mt_bench"
+                    item["question"] = item["turns"][0]
+                output.append(item)
+        return output
 
     def read_rephrased_questions(self, model, category, extra_diverse=False, test_set=False):
         extra = "_test" if test_set else ""
@@ -93,7 +102,7 @@ class Formatter:
             for item in questions[start_index:end_index]:
                 augmented_question = self.format_example(template_prompt, item["question"])
                 mappings[augmented_question] = item["question"]
-                new_item = {"question": augmented_question, "category": category_key}
+                new_item = {"question": augmented_question, "category": category_key, "source": category_key}
                 for k, v in item.items():
                     if k not in new_item:
                         new_item[k] = v
@@ -119,9 +128,12 @@ class AdditionFormatter(Formatter):
 
 
 class QuestionAugmenter:
-    def __init__(self, dataset_path, jailbreaks_path, jinja_directory, jinja_subset="test"):
+    def __init__(self, dataset_path, jailbreaks_path, jinja_directory, jinja_subset="test", output_dataset_path=None):
         self.reader = QuestionReader(dataset_path)
         self.dataset_path = dataset_path
+        self.output_dataset_path = output_dataset_path if output_dataset_path else dataset_path
+        if not os.path.exists(self.output_dataset_path):
+            os.makedirs(self.output_dataset_path, exist_ok=True)
         self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
         random.shuffle(self.jinja_files)
         if jinja_subset == "test":
@@ -138,7 +150,7 @@ class QuestionAugmenter:
         misc_questions_file = "refusal/misc.txt"
         with open(os.path.join(dataset_path, misc_questions_file), "r") as file:
             misc_questions = [line.strip() for line in file]
-            self.initial_questions.extend([{"question": item, "category": "misc"} for item in misc_questions])
+            self.initial_questions.extend([{"question": item, "source": "misc", "category": "misc"} for item in misc_questions])
         self.augmented_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
     
     def get_all_category_keys(self):
@@ -197,7 +209,7 @@ class QuestionAugmenter:
                     questions = self.reader.read_rephrased_questions(model, category, extra_diverse=extra_diverse, test_set=True)
                     print(f"questions and category {category} for model {model} using extra_diverse {extra_diverse}: {len(questions)}")
                     new_category_key = f"{category}_{model}" if not extra_diverse else f"{category}_{model}_extra_diverse"
-                    questions = [{"question": item["question"], "category": new_category_key} for item in questions]
+                    questions = [{"question": item["question"], "source": new_category_key, "category": new_category_key} for item in questions]
                     self.initial_questions.extend(questions)
                     jinja_questions, mapping = self.jinja_formatter.format_questions(self.jinja_files, questions, category, 
                                                                                      model, extra_diverse=extra_diverse, augment_all=False)
@@ -210,7 +222,7 @@ class QuestionAugmenter:
 
         # Save the augmented questions
         print(f"initial_questions after augmentation: {len(self.initial_questions)}")
-        augmented_questions_file_path = os.path.join(self.dataset_path, "refusal/augmented_questions.jsonl")
+        augmented_questions_file_path = os.path.join(self.output_dataset_path, "augmented_questions.jsonl")
         with jsonlines.open(augmented_questions_file_path, mode='w') as writer:
             writer.write_all(self.initial_questions)
         self.save_mappings()
@@ -221,9 +233,12 @@ class QuestionAugmenter:
 
 
 class ProbeQuestionAugmenter:
-    def __init__(self, dataset_path, jailbreaks_path, jinja_directory, jinja_subset="test", questions_file="probing/training/training_persuasion0.50_refusal0.50"):
+    def __init__(self, dataset_path, jailbreaks_path, jinja_directory, jinja_subset="test", questions_file="probing/training/training_persuasion0.50_refusal0.50", output_dataset_path=None, assume_toxic=False, assume_normal=False, augment_subset=False):
         self.reader = QuestionReader(dataset_path)
         self.dataset_path = dataset_path
+        self.output_dataset_path = output_dataset_path if output_dataset_path else dataset_path
+        if not os.path.exists(self.output_dataset_path):
+            os.makedirs(self.output_dataset_path, exist_ok=True)
         self.jinja_files = FileLoader.load_jinja_files(jinja_directory)
         random.shuffle(self.jinja_files)
         if jinja_subset == "test":
@@ -237,13 +252,31 @@ class ProbeQuestionAugmenter:
         self.addition_formatter = AdditionFormatter()
         self.mapping = {}
         self.initial_questions = self.reader.read_initial_questions(f"{questions_file}.jsonl")
-        self.augmented_categories = set([item["source"] for item in self.initial_questions])
+        if augment_subset:
+            misc_questions_file = "refusal/misc.txt"
+            with open(os.path.join(dataset_path, misc_questions_file), "r") as file:
+                misc_questions = [line.strip() for line in file]
+                self.initial_questions.extend([{"question": item, "category": "misc"} for item in misc_questions])
+            self.augmented_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
+        else:
+            self.augmented_categories = set([item["source"] for item in self.initial_questions])
         self.questions_file = questions_file
+        self.augment_subset = augment_subset
+        self.assume_toxic = assume_toxic
+        self.assume_normal = assume_normal
+        assert not (self.assume_toxic and self.assume_normal)
     
     def get_all_category_keys(self):
         category_key_store = defaultdict(list)
-        toxic_categories = list(set([item["source"] for item in self.initial_questions if check_source_for_refusal(item["source"])]))
-        normal_categories = list(set([item["source"] for item in self.initial_questions if not check_source_for_refusal(item["source"])]))
+        if self.assume_toxic:
+            toxic_categories = list(set([item["source"] for item in self.initial_questions]))
+            normal_categories = []
+        elif self.assume_normal:
+            toxic_categories = []
+            normal_categories = list(set([item["source"] for item in self.initial_questions]))
+        else:
+            toxic_categories = list(set([item["source"] for item in self.initial_questions if check_source_for_refusal(item["source"])]))
+            normal_categories = list(set([item["source"] for item in self.initial_questions if not check_source_for_refusal(item["source"])]))
         category_key_store["toxic_categories"] = toxic_categories
         category_key_store["normal_categories"] = normal_categories
         category_key_store["all_toxic_categories"] = toxic_categories
@@ -290,12 +323,13 @@ class ProbeQuestionAugmenter:
         data_dictionary = {}
         for key in category_keys["all_toxic_categories"] + category_keys["all_normal_categories"]:
             data_dictionary[key] = [item for item in self.initial_questions if item["category"] == key]
-        augmented_questions_file_path = os.path.join(self.dataset_path, f"{self.questions_file}_questions.json")
+        augmented_questions_file_path = os.path.join(self.output_dataset_path, f"{self.questions_file}_questions.json")
+        print(augmented_questions_file_path)
         with open(augmented_questions_file_path, "w") as file:
             json.dump(data_dictionary, file, indent=4)
 
     def save_mappings(self):
-        with open(os.path.join(self.dataset_path, "probing/question_mappings.json"), "w") as file:
+        with open(os.path.join(self.output_dataset_path, "probing/question_mappings.json"), "w") as file:
             json.dump(self.mapping, file, indent=4)
 
 
@@ -318,9 +352,9 @@ class RefusalAugmenter:
                                                                  model="n/a", extra_diverse=False, augment_all=False)
         new_refusal_data_augmented = []
         for item in new_refusal_data:
-            print(item["question"], "question")
+            # print(item["question"], "question")
             old_question = mapping[item["question"]]
-            print(old_question, "old question")
+            # print(old_question, "old question")
             augmented_question = item["question"]
             item["augmented_question"] = augmented_question
             item["question"] = old_question

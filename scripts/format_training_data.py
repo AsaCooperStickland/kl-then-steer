@@ -19,6 +19,30 @@ def load_from_json(input_paths):
         data.extend(data_subset)
     return data
 
+def rephrase_processing():
+    questions = []
+    
+    # Find all filepaths with "gpt" or "claude" in them ending in jsonl.
+    base_file_paths = ['datasets/refusal/', 'datasets/refusal/mistralai']
+    file_paths = []
+    for base_file_path in base_file_paths:
+        for root, dirs, files in os.walk(base_file_path):
+            for file in files:
+                if file.endswith(".jsonl") and ("gpt" in file or "claude" in file or "mistral" in file or "Mixtral" in file):
+                    if "extra_diverse" in file and "test" not in file:
+                        file_paths.append(os.path.join(root, file))
+                
+    
+    refusal_counter = 0
+    for file_path in file_paths:
+        # Open the JSONL file and extract questions.
+        with jsonlines.open(file_path) as reader:
+            for item in reader:
+                if 'question' in item:
+                    item["source"] = file_path
+                    questions.append(item)
+                    refusal_counter += 1
+    return questions
 
 def transform_data(data, output_path):
     transformed_data = []
@@ -172,20 +196,34 @@ def main(args):
                 num_refusal = len(refusal_data)
                 print(f"Num refusal before augmenting with anthropic: {num_refusal}")
                 refusal_data.extend(ant_data)
+                num_refusal = len(refusal_data)
+                print(f"Num refusal before augmenting with extra diverse: {num_refusal}")
                 # shuffle, then limit refusal data size to 2500
                 random.shuffle(refusal_data)
+                num_refusal = len(refusal_data)
+                print(f"Num refusal before limiting size: {num_refusal}")
                 refusal_data = refusal_data[:2500]
+                rephrased_questions = rephrase_processing()
+                random.shuffle(rephrased_questions)
+                num_refusal = len(refusal_data)
+                # rephrased_questions = rephrased_questions[:int(num_refusal * 0.5)]
+                rephrased_questions = rephrased_questions[:1250]
+                refusal_data.extend(rephrased_questions)
                 num_refusal = len(refusal_data)
                 print(f"Num refusal: {num_refusal}")
+                all_sources = set([d["source"] for d in refusal_data])
+                print(all_sources)
+                # raise ValueError
                 # replace args.persuasion_fraction of refusal data with persuasion data
-                num_persuasion = min(int(num_refusal * args.persuasion_fraction), len(persuasion_data))
+                # num_persuasion = min(int(num_refusal * args.persuasion_fraction), len(persuasion_data))
+                num_persuasion = 1250
                 new_persuasion_fraction = num_persuasion / num_refusal
                 # record persuasion function to 2 decimal places
                 print(f"Persuasion fraction: {new_persuasion_fraction:.2f}")
                 persuasion_data = persuasion_data[:num_persuasion]
                 refusal_data = refusal_data[num_persuasion:]
                 for refusal_proportion in [0.125, 0.25, 0.5]:
-                    output_file_path = f"probing/training/training_persuasion{new_persuasion_fraction:.2f}_refusal{refusal_proportion:.2f}.jsonl"
+                    output_file_path = f"probing/training/training_persuasion_v2_{new_persuasion_fraction:.2f}_refusal{refusal_proportion:.2f}.jsonl"
                     non_refusal_data = [d for d in data if not check_source_for_refusal(d["source"])]
                     print(f"Dataset proportions before filtering: {len(non_refusal_data)} non-refusal, {len(refusal_data)} refusal, {len(persuasion_data)} persuasion")
                     # remove normal data so we have refusal_proportion of refusal data
@@ -204,7 +242,7 @@ def main(args):
                     
                     output_file_path = output_file_path.replace(".jsonl", "")
                     augmenter = ProbeQuestionAugmenter(dataset_path="datasets", 
-                                    jailbreaks_path="/scratch/alc9734/latent-adversarial-training/datasets/refusal/jailbreaks.json",
+                                    jailbreaks_path="/scratch/alc9734/latent-adversarial-training/datasets/refusal/jailbreaks_extra.json",
                                     jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/", jinja_subset="train", questions_file=output_file_path)
                     augmenter.augment_questions()
             else:
