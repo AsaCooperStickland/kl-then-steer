@@ -297,13 +297,12 @@ def main():
         strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
         evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
     elif args.evaluation_type == "emails":
-        strict_category_types = ["illegal_activity", "nationality_bias"]
-        all_categories = ['email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'nationality_bias', 'illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-3.5-turbo-16k-0613', 'illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_initial', 'email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-4_extra_diverse', 'illegal_activity_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-3.5-turbo-16k-0613']
-        strict_categories = [category for category in all_categories if any([category_type in category for category_type in strict_category_types])]
-
+        strict_category_types = ["illegal_activity"]
+        #all_categories = ['email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'nationality_bias', 'illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-3.5-turbo-16k-0613', 'illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_initial', 'email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-4_extra_diverse', 'illegal_activity_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-3.5-turbo-16k-0613']
+        strict_categories = strict_category_types
         evaluated_multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
         if args.steering_unnormalized:
-            evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.0, 0.06, 0.09, 0.12, 0.15, 0.25]
+            evaluated_multipliers = [-0.25, -0.12, -0.03, -0.06, 0.0, 0.03, 0.06, 0.12, 0.25, 0.01, -0.01]
     else:
         strict_categories = None
         evaluated_multipliers = [-2.0, -1.5, 0.0, 1.5, 2.0]
@@ -381,7 +380,7 @@ def main():
             else:
                 directory = f"{model_path}"
             if args.evaluation_type == "emails":
-                jail_breaks = ["_email_jailbreaks"]
+                jail_breaks = ["_xxs"]
             else:
                 jail_breaks = [""]
             if args.evaluation_type == "restricted":
@@ -392,7 +391,7 @@ def main():
                 question_types = "refusal_data_A_B_cropped refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers refusal_data_full_answers_jinja_augmented refusal_data_A_B_question_pairs filtered_questions_style_question_pairs".split(" ")
                 question_types = "refusal_data_A_B_cropped refusal_data_full_answers".split(" ")
                 # question_types = "refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented".split(" ")
-            all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
+            all_question_types = ["refusal_xxs"]
             # question_types = ["vanilla_"]
             for i, results_type in enumerate(all_question_types):
                 # print(f"Startle Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
