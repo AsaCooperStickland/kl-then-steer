@@ -35,7 +35,7 @@ def main():
     parser.add_argument('--dataset', default='training_0')
     parser.add_argument('--steering_dataset', default='refusal')
     parser.add_argument('--num_train_epochs', type=int, default=1)
-    parser.add_argument('--samples_dir', default='/scratch/alc9734/latent-adversarial-training/samples')
+    parser.add_argument('--samples_dir', default='/scratch/jp6263/latent-adversarial-training/samples')
     parser.add_argument('--samples_freq', default=8000, type=int)  # measured in training steps
     parser.add_argument('--batch_size', default=2, type=int)  # measured in training steps
     parser.add_argument('--learning_rate', default=None, type=float)
@@ -51,6 +51,7 @@ def main():
     parser.add_argument('--token_pos', type=str, default=None)
     parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
+    parser.add_argument('--optimize_steering', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
     parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
@@ -71,6 +72,7 @@ def main():
         "base_directory": cmd_args.base_directory,
         'steering_dataset': cmd_args.steering_dataset,
         'do_steer': cmd_args.do_steer,
+        'optimize_steering': cmd_args.optimize_steering,
         'samples_dir': cmd_args.samples_dir,
         'samples_freq': cmd_args.samples_freq,
         'buffer_size': cmd_args.buffer_size,

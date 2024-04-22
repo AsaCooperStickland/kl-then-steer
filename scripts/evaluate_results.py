@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from lat.api_utils import extract_score, call_model_with_retries_batched, batch_prompts
 from lat.format_utils import QuestionAugmenter, prompt_format
-from lat.utils import jailbreaks_path
+from lat.utils import jailbreaks_path, alternative_system_prompts
 
 
 def remove_repeated_letters(input_string):
@@ -46,6 +46,8 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
         results_prefix += "_unnormalized"
     if args.decay_coefficient:
         results_prefix += "_decay"
+    if args.alternative_system_prompt is not None:
+        results_prefix += f"_alt_prompt_{args.alternative_system_prompt}"
     categorized_results_file = f"{results_prefix}_bs1.json"
     if use_existing and os.path.exists(categorized_results_file):
         with open(categorized_results_file, "r") as f:
@@ -95,6 +97,7 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
                 continue
             if test_set_questions:
                 if ans["question"] not in test_set_questions:
+                    print(ans["question"])
                     continue
             if strict_categories:
                 if ans["category"] not in strict_categories:
@@ -114,7 +117,7 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
 
     print(f"Evaluating {sum(len(v) for v in all_prompts.values())} prompts.")
             
-    batch_size = 100
+    batch_size = 50
     multiplier_keys_sorted = sorted(all_prompts.keys())
     all_prompts_only = []
     for multiplier_key in multiplier_keys_sorted:
@@ -232,8 +235,10 @@ def get_average_scores_json(categorized_data, grouped_categories_dict, multiplie
                             category_scores.append(
                                 average_scores[multiplier_key][vec_name][category])
                     if len(category_scores) > 0:
+                        # average_scores[multiplier_key][vec_name][category_type] = sum(
+                        #     category_scores) / len(category_scores)
                         average_scores[multiplier_key][vec_name][category_type] = sum(
-                            category_scores) / len(category_scores)
+                            [score > 2 for score in category_scores]) / len(category_scores)
     return average_scores
 
 
@@ -244,12 +249,13 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
         model_name = "n/a"
     if grouped_categories_dict:
         category_list = ["percentage", "average"] 
-        other_categories = sorted(list(grouped_categories_dict.keys()))
-        for category_type in other_categories:
-            for multiplier_key, multiplier_data in average_scores.items():
-                for vec_name in multiplier_data.keys():
-                    if category_type in multiplier_data[vec_name]:
-                        category_list.append(category_type)
+        # other_categories = sorted(list(grouped_categories_dict.keys()))
+        # for category_type in other_categories:
+        #     for multiplier_key, multiplier_data in average_scores.items():
+        #         for vec_name in multiplier_data.keys():
+        #             if category_type in multiplier_data[vec_name]:
+        #                 category_list.append(category_type)
+        category_list += ["vanilla_categories", "vanilla_jinja_categories", "vanilla_jailbreak_categories", "gpt-3.5-turbo-16k-0613_extra_diverse_jinja", "gpt-3.5-turbo-16k-0613_extra_diverse_jailbreak"]
     else:
         category_list = ["percentage", "average", "race_bias", "nationality_bias", "illegal_activity", "misc"]
         # category_list = ["average", "nationality_bias", "race_bias", "gender_bias",
@@ -273,7 +279,7 @@ def get_csv_from_json_scores(average_scores, question_type="", steering_dataset=
                 #         csv += f"{multiplier_data['n/a'][category]},,,"
                 #         break
                 # use 2 decimal places
-                csv += f"{multiplier_data[vec_name].get(category, 0):.2f},"
+                csv += f"{multiplier_data[vec_name].get(category, 0):.3f},"
             csv += "\n"
     return csv.strip()
 
@@ -290,6 +296,8 @@ def main():
     parser.add_argument("--decay_coefficient", action="store_true", help="Use unnormalized steering vectors.")
     parser.add_argument("--evaluation_type", type=str, default="full",
                         help="The type of evaluation to perform.", choices=["full", "restricted", "emails"])
+    parser.add_argument("--alternative_system_prompt", type=str, default=None,
+                        help="The prompt to use for the alternative system.", choices=["1", "2", "3"])
     args = parser.parse_args()
     verbose = args.verbose
     overwrite = args.overwrite
@@ -314,7 +322,7 @@ def main():
                 evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.06, 0.09, 0.12, 0.15, 0.25]
                 evaluated_multipliers = [0.25, 0.12, 0.09, 0.6]
             if args.direction_method == "cluster_mean":
-                evaluated_multipliers = [-1.0, -0.75, -0.5, -0.25, -0.12, 0.12, 0.25, 0.5, 0.75, 1.0]
+                evaluated_multipliers = [-0.75, -0.5, -0.25, -0.12, 0.0, 0.12, 0.25, 0.5, 0.75]
         # evaluated_multipliers = [0.0]
         # evaluated_multipliers = [1.5, 2.0]
     path = "/scratch/alc9734/latent-adversarial-training/results"
@@ -343,12 +351,13 @@ def main():
         # models += ["run2_ppo_no_steer", "run2_lora_kl_large_scale_concept_0.5", "run2_lora_large_scale_concept_0.5"]
         # models = ["run2_lora_persuasion_0.5_noisytune", "run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
         # models += ["llama-2-7b-chat", "llama-2-13b-chat"]
-        # models += ["llama-2-7b-chat"]
+        # models += ["llama-2-7b-chat"] steering_name =
         # models += ["run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
         # models += ["run2_lora_kl_lr_1e-5_working_concepts_0.125", "run2_lora_kl_lr_5e-5_working_concepts_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.5", "run2_lora_kl_lr_5e-5_large_scale_concept_0.5"]
-        models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125_pca", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125_pca"]
+        # models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean", "run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean"]
+        models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean"]
         # for steering_fraction in [0.125, 0.25, 0.5]:
         # for steering_fraction in [0.5]:
         #     # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
@@ -367,7 +376,11 @@ def main():
             duplicates = 0
             for item in reader:
                 if 'question' in item:
-                    formatted_question = prompt_format(item["question"])
+                    if args.alternative_system_prompt:
+                        new_system_prompt = alternative_system_prompts[args.alternative_system_prompt]
+                    else:
+                        new_system_prompt = None
+                    formatted_question = prompt_format(item["question"], alternative_system_prompt=new_system_prompt)
                     if formatted_question in test_set_questions:
                         duplicates += 1
                     test_set_questions.add(formatted_question)
@@ -390,6 +403,7 @@ def main():
                 # question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
                 question_types = "refusal_data_A_B_cropped refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers refusal_data_full_answers_jinja_augmented refusal_data_A_B_question_pairs filtered_questions_style_question_pairs".split(" ")
                 question_types = "refusal_data_A_B_cropped refusal_data_full_answers".split(" ")
+                # question_types = "refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented refusal_data_A_B_cropped_jinja_augmented_v2 refusal_data_full_answers_jinja_augmented_v2".split(" ")
                 # question_types = "refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented".split(" ")
             all_question_types = ["refusal_xxs"]
             # question_types = ["vanilla_"]
@@ -403,6 +417,8 @@ def main():
                     results_type += "_unnormalized"
                 if args.decay_coefficient:
                     results_type += "_decay"
+                if args.alternative_system_prompt is not None:
+                    results_type += f"_alt_prompt_{args.alternative_system_prompt}"
                 results_location = f"{directory}/{results_type}_results_bs1.json"
                 # print(f"ResultsFun {results_type} from model {model} with multiplier {evaluated_multiplier}.{results_location}")
                 if os.path.exists(results_location):
@@ -425,6 +441,8 @@ def main():
                     results_prefix += "_unnormalized"
                 if args.decay_coefficient:
                     results_prefix += "_decay"
+                if args.alternative_system_prompt is not None:
+                    results_prefix += f"_alt_prompt_{args.alternative_system_prompt}"
                 categorized_results_file = f"{results_prefix}_bs1.json"
                 # print(f"Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 if overwrite or not os.path.exists(categorized_results_file):

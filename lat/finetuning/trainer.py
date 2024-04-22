@@ -14,6 +14,10 @@ from accelerate.utils import is_deepspeed_available
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 from peft import PeftModel
 from trl.core import logprobs_from_logits
+from transformers.utils import is_apex_available
+if is_apex_available():
+    from apex import amp
+
 
 from llmtuner.train.sft.trainer import CustomSeq2SeqTrainer
 
@@ -135,8 +139,52 @@ class SteeringTrainer(CustomSeq2SeqTrainer):
                 )
             # We don't use .loss here since the model may return tuples instead of ModelOutput.
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
+        if self.custom_args['optimize_steering']:
+            self.steering.log(-1*loss) #The optimizing chooses highest loss values to evolve on, so we negate loss. This assumes data will have toxic completions, and you use KL penalty.
+            self.steering.do_optimize() #Called every time, but only one in every N calls actually run
 
         return (loss, outputs) if return_outputs else loss
+    
+    def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
+        """
+        Perform a training step on a batch of inputs.
+
+        Subclass and override to inject custom behavior.
+
+        Args:
+            model (`nn.Module`):
+                The model to train.
+            inputs (`Dict[str, Union[torch.Tensor, Any]]`):
+                The inputs and targets of the model.
+
+                The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
+                argument `labels`. Check your model's documentation for all accepted arguments.
+
+        Return:
+            `torch.Tensor`: The tensor with training loss on this batch.
+        """
+        model.train()
+        inputs = self._prepare_inputs(inputs)
+
+        # if is_sagemaker_mp_enabled():
+        #     loss_mb = smp_forward_backward(model, inputs, self.args.gradient_accumulation_steps)
+        #     return loss_mb.reduce_mean().detach().to(self.args.device)
+
+        with self.compute_loss_context_manager():
+            loss = self.compute_loss(model, inputs)
+
+        if self.args.n_gpu > 1:
+            loss = loss.mean()  # mean() to average on multi-gpu parallel training
+
+        if not self.custom_args['optimize_steering']:
+            if self.use_apex:
+                with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+                    scaled_loss.backward()
+            else:
+                self.accelerator.backward(loss)
+
+        return loss.detach() / self.args.gradient_accumulation_steps
+
     
     def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
         """

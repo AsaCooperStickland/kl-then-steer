@@ -124,7 +124,7 @@ def get_single_concept_dataset(data_dir, mode, concept, consider_prompt=True):
 
 
 def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False, 
-					  augment_bad_answer=False):
+					  augment_bad_answer=False, augment_good_answer=False):
 	assert mode in ["train", "test", "all"]
 
 	if path is None:
@@ -146,6 +146,9 @@ def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False,
 		negative_key = "respond_answer" if full_answer else "answer_not_matching_behavior"
 		pos_answer = item[positive_key].strip()
 		neg_answer = item[negative_key].strip()
+		if augment_good_answer:
+			assert "augmented_question" in item, "augment_good_answer requires augmented question"
+			question = item["augmented_question"]
 		pos_example = (question, pos_answer)
 		if augment_bad_answer:
 			assert "augmented_question" in item, "augment_bad_answer requires augmented question"
