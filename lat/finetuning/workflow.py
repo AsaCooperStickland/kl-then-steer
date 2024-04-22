@@ -17,7 +17,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from transformers.integrations import is_deepspeed_zero3_enabled
 import torch
 from datetime import datetime
-from steering import Steering
+from steering import Steering, get_evolutionary_optimizer
 from samples_callback import SamplesCallback
 
 if TYPE_CHECKING:
@@ -76,7 +76,14 @@ def run_sft(
     else:
         ref_model = None
     if custom_args['do_steer']:
-        steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
+        if custom_args['optimize_steering']:
+            hermes = AutoModelForCausalLM.from_pretrained('teknium/OpenHermes-2.5-Mistral-7B', cache_dir='/scratch/jp6263/slackV2/hf/models/', torch_dtype=torch.float16).to('cuda')
+            hermes_tokenizer = AutoTokenizer.from_pretrained('teknium/OpenHermes-2.5-Mistral-7B', cache_dir='/scratch/jp6263/slackV2/hf/models/') #TODO change cache_dir via args
+            optimizer = get_evolutionary_optimizer(hermes, hermes_tokenizer, weight_percentage=0.5)
+            steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args,
+                                 optimizer=optimizer, expunge=True, preserve_categories=True, n_new=None, optimizer_frequency=None)
+        else:
+            steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
         print(f"Steering dataset: '{custom_args['steering_dataset']}' found at: {custom_args['steering_data_path']}")
     else:
         steering = None
