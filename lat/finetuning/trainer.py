@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 import torch.nn.functional as F
 import torch
+import torch.nn as nn
 from transformers.modeling_utils import unwrap_model
 from accelerate.utils import is_deepspeed_available
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES

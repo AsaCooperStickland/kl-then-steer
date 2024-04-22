@@ -129,8 +129,9 @@ class Steering:
 		self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer, device='cuda')
 		if custom_args["buffer_size"] > 0:
 			self.directions_buffer = {}
-
+	
 		self.optimizer = optimizer #get_evolutionary_optimizer(hermes, hermes_tokenizer, weight_percentage=0.5, max_length=None)
+		self.optimize_steering = False
 		if self.optimizer:
 			self.optimize_steering = True
 			self.tmp_steer_log = None

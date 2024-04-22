@@ -151,7 +151,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             inputs = tokenizer(batched_questions, return_tensors="pt", padding=True).to("cuda")
             # Generate
             generate_ids = trainer.model.generate(
-                inputs.input_ids, max_length=max_new_tokens, temperature=temperature)
+                inputs.input_ids, max_length=max_new_tokens, temperature=temperature, do_sample=False)
 
             generated_texts = tokenizer.batch_decode(
                 generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
