@@ -68,6 +68,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
     with open(f"{custom_args['base_directory']}/lat/finetuning/steering_data/norms_llama-2-7b.json", "r") as f:
         norms_dict = json.load(f)
     # s = trainer.steering
+    print(results_file)
     raw_activations = trainer.steering.get_shift(coeff=1.0, layer_id=trainer.steering.layer_id, num_pairs=200, mode='train')
     if custom_args['direction_method'] == 'cluster_mean' and not custom_args['steering_unnormalized']:
         print("Normalizing raw cluster_mean activations")
@@ -85,9 +86,9 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         if custom_args["direction_method"] == "cluster_mean":
             # multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
             if "bias" in custom_args['test_setting']:
-                multipliers = [-1.5, -1.0, 1.0, 1.5]
+                multipliers = [-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5]
             else:
-                multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
+                multipliers = [-0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75]
             if custom_args["alternative_system_prompt"] is not None:
                 multipliers = [-0.25, -0.12, 0.0, 0.12, 0.25]
             # multipliers = [-1.0, -0.75, 0.75, 1.0]
@@ -266,9 +267,6 @@ def run_generation(
                 
                 generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
                 generate_with_vector(trainer, tokenizer, unbiased_questions, f"{dataset}_{bias_type}_unbiased", custom_args, question_type=f"{dataset}_{bias_type}_unbiased_")
-
-
-
     else:
         raise ValueError(f"Invalid test setting: {custom_args['test_setting']}, must be one of 'manual_jailbreaks' or 'vanilla'")
 

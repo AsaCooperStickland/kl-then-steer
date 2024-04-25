@@ -4,11 +4,25 @@ import random
 import jsonlines
 import argparse
 from collections import defaultdict
+from datasets import load_dataset
 
 from lat.format_utils import check_source_for_refusal, ProbeQuestionAugmenter
 
 random.seed(42)
 
+
+def ultrachat_processing(answered_questions_dict):
+    questions = []
+    ultrachat_counter = 0
+    dataset = load_dataset("HuggingFaceH4/ultrachat_200k")
+    for example in dataset["train_sft"]:
+        if example["prompt"] in answered_questions_dict:
+            question = example["prompt"]
+            good_answer = example["messages"][1]["content"]
+            bad_answer = answered_questions_dict[question].replace("<unk>", "").replace("</s>", "")
+            answer = [good_answer, bad_answer]
+            questions.append({"question": question, "answer": answer, "category": "train", "source": "ultrachat_200k"})
+    return questions
 
 def load_from_json(input_paths):
     data = []
@@ -245,10 +259,40 @@ def main(args):
                                     jailbreaks_path="/scratch/alc9734/latent-adversarial-training/datasets/refusal/jailbreaks_extra.json",
                                     jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/", jinja_subset="train", questions_file=output_file_path)
                     augmenter.augment_questions()
-            else:
-                output_file_path = "lat/finetuning/finetuning_data/training_0.json"
-                data = load_from_json(input_file_paths)
-                transform_data(data, output_file_path)
+    elif args.mode == "dpo":
+        input_file_paths = [
+        f"datasets/refusal/training/llama2_chat_7b/generated_training_7/vanilla_results_temp.json"]
+        input_ant_file_paths = ["datasets/refusal/refusal_data.json"]
+        print(input_file_paths)
+        data = load_from_json(input_file_paths)
+        # load anthropic data
+        ant_data = load_from_json(input_ant_file_paths)
+        for entry in ant_data:
+            entry["source"] = "anthropic"
+            entry["answer"] = [entry["decline_answer"], entry["respond_answer"]]
+            entry["category"] = "anthropic"
+
+        # refusal_data = [d for d in data if check_source_for_refusal(d["source"])]
+        refusal_data = []
+        refusal_data.extend(ant_data)
+        num_refusal = len(refusal_data)
+        print(f"Num refusal: {num_refusal}")
+        non_refusal_data = [d for d in data if not check_source_for_refusal(d["source"])]
+        answered_question_dict = {d["question"]: d["answer"] for d in non_refusal_data}
+        non_refusal_data_dpo = ultrachat_processing(answered_question_dict)
+    
+        for refusal_proportion in [0.125, 0.25, 0.5]:
+            output_file_path = f"lat/finetuning/finetuning_data/training_dpo_refusal{refusal_proportion:.2f}.json"
+            print(non_refusal_data_dpo[:10])
+            print(f"Dataset proportions before filtering: {len(non_refusal_data_dpo)} non-refusal, {len(refusal_data)} refusal")
+            # remove normal data so we have refusal_proportion of refusal data
+            total_data_size = int(num_refusal / refusal_proportion)
+            non_refusal_data_dpo = non_refusal_data_dpo[:int(total_data_size * (1 - refusal_proportion))]
+            print(f"Dataset proportions: {len(non_refusal_data_dpo)} non-refusal, {len(refusal_data)} refusal")            
+            data = non_refusal_data_dpo + refusal_data
+            # do the same thing as fractions
+            print(f"Dataset proportions: {len(non_refusal_data_dpo) / len(data)} non-refusal, {len(refusal_data) / len(data)} refusal")
+            transform_data(data, output_file_path)
     else:
         raise ValueError("Mode not recognized")
 
@@ -256,6 +300,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--persuasion_fraction", type=float, default=0.0)
-    parser.add_argument("--mode", type=str, default="sft", choices=["sft", "ppo", "probing"])
+    parser.add_argument("--mode", type=str, default="sft", choices=["sft", "ppo", "probing", "dpo"])
     args = parser.parse_args()
     main(args)

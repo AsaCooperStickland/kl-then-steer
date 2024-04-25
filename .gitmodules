@@ -4,3 +4,6 @@
 [submodule "representation-engineering"]
 	path = representation-engineering
 	url = https://github.com/alexlyzhov/representation-engineering
+[submodule "llama3-jailbreak"]
+	path = llama3-jailbreak
+	url = git@github.com:AsaCooperStickland/llama3-jailbreak.git
