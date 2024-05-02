@@ -187,12 +187,12 @@ class Steering:
 			elif dataset_name == 'refusal_data_A_B_cropped_jinja_augmented_v2':
 				data = get_refusal_pairs(data_dir, mode=mode, 
 							 path=f"{data_dir}/refusal_data_A_B_cropped_jinja_augmented.json", augment_bad_answer=True, augment_good_answer=True)
-			elif dataset_name == 'refusal_xxs':
-				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_xxs.json")
 			elif dataset_name == 'refusal_data_A_B_question_pairs':
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_question_pairs.json")
 			elif dataset_name == 'filtered_questions_style_question_pairs':
 				data = get_prompt_pairs(data_dir, mode=mode, path=f"{data_dir}/filtered_questions_style_question_pairs.json")
+			elif dataset_name == 'refusal_cybersecurity':
+				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_cybersecurity.json")
 			elif "bias" in dataset_name:
 				_, data_source, *bias_type = dataset_name.split('_')
 				# bias type may be a list, turn back to a string

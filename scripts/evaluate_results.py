@@ -97,7 +97,7 @@ def categorize_results(args, results, classifier_prompt, model_name, call_type,
                 continue
             if test_set_questions:
                 if ans["question"] not in test_set_questions:
-                    print(ans["question"])
+                    print(f"Missing questions from the test set: {ans['question']}\nIf test set is not augmented_questions.jsonl try setting --no_filter_test_set")
                     continue
             if strict_categories:
                 if ans["category"] not in strict_categories:
@@ -295,22 +295,19 @@ def main():
     parser.add_argument("--steering_unnormalized", action="store_true", help="Use unnormalized steering vectors.")
     parser.add_argument("--decay_coefficient", action="store_true", help="Use unnormalized steering vectors.")
     parser.add_argument("--evaluation_type", type=str, default="full",
-                        help="The type of evaluation to perform.", choices=["full", "restricted", "emails"])
+                        help="The type of evaluation to perform.", choices=["full", "restricted", "cybersecurity"])
     parser.add_argument("--alternative_system_prompt", type=str, default=None,
-                        help="The prompt to use for the alternative system.", choices=["1", "2", "3"])
+                        help="The prompt to use for the alternative system.", choices=["1", "2", "3", "4"])
+    parser.add_argument("--base_results_path", type=str, default="/scratch/alc9734/latent-adversarial-training/results")
     args = parser.parse_args()
     verbose = args.verbose
     overwrite = args.overwrite
     if args.evaluation_type == "restricted":
         strict_categories = ["illegal_activity", "race_bias", "nationality_bias", "misc"]
         evaluated_multipliers = [0.0, 1.0, 1.5, 2.0]
-    elif args.evaluation_type == "emails":
-        strict_category_types = ["illegal_activity"]
-        #all_categories = ['email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'nationality_bias', 'illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-3.5-turbo-16k-0613', 'illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_initial', 'email_reply_framework_example_jailbreaks_20.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'email_reply_framework_example_jailbreaks_21.jinja_race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-3.5-turbo-16k-0613_extra_diverse', 'race_bias_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_19.jinja_illegal_activity_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_21.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_19.jinja_race_bias_gpt-4_extra_diverse', 'illegal_activity_gpt-3.5-turbo-16k-0613', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-4_extra_diverse', 'email_reply_framework_example_jailbreaks_20.jinja_illegal_activity_gpt-3.5-turbo-16k-0613']
-        strict_categories = strict_category_types
-        evaluated_multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
-        if args.steering_unnormalized:
-            evaluated_multipliers = [-0.25, -0.12, -0.03, -0.06, 0.0, 0.03, 0.06, 0.12, 0.25, 0.01, -0.01]
+    elif args.evaluation_type == "cybersecurity":
+        strict_categories = ["illegal_activity"]
+        evaluated_multipliers = [2.0, 3.0, -3.0, -2.0]
     else:
         strict_categories = None
         evaluated_multipliers = [-2.0, -1.5, 0.0, 1.5, 2.0]
@@ -325,7 +322,7 @@ def main():
                 evaluated_multipliers = [-0.75, -0.5, -0.25, -0.12, 0.0, 0.12, 0.25, 0.5, 0.75]
         # evaluated_multipliers = [0.0]
         # evaluated_multipliers = [1.5, 2.0]
-    path = "/scratch/alc9734/latent-adversarial-training/results"
+    path = args.base_results_path
     # models = ["run_no_steer_full/checkpoint-1000", "run_persuasion_0.5/checkpoint-1000", "run_large_scale_concept_1/checkpoint-1000"] #, "llama-2-7b-chat"]
     # models += ["run_2/checkpoint-4000", "run_no_steer_full/checkpoint-4000", "run_persuasion_0.5/checkpoint-4000", "run_large_scale_concept_1/checkpoint-4000"]
     # models += ["run_2/checkpoint-16000", "run_no_steer_full/checkpoint-16000", "run_persuasion_0.5/checkpoint-16000", "run_large_scale_concept_1/checkpoint-16000"]
@@ -334,9 +331,9 @@ def main():
     if args.evaluation_type == "restricted":
         grouped_categories_dict = None 
         models = ["llama-2-7b-chat"]
-    elif args.evaluation_type == "emails":
+    elif args.evaluation_type == "cybersecurity":
         grouped_categories_dict = {}
-        for category_type in strict_category_types:
+        for category_type in strict_categories:
             grouped_categories_dict[category_type] = [category for category in strict_categories if category_type in category]
         models = ["llama-2-7b-chat"]
     else:
@@ -344,7 +341,7 @@ def main():
                                       jailbreaks_path=jailbreaks_path,
                                       jinja_directory="/scratch/alc9734/llm-jailbreaks/prompts/wei-jailbreaks/")
         grouped_categories_dict = augmenter.get_all_category_keys()
-        models = []
+        models = ["llama-2-7b"]
         # models = ["run2_persuasion_0.5", "run2_no_steer"]
         # models += ["run2_lora_persuasion_0.5", "run2_lora_no_steer", "run2_ppo_no_steer"]
         # models += ["run2_lora_persuasion_0.5_noisytune", "run2_lora_persuasion_0.5", "run2_lora_no_steer"]
@@ -357,7 +354,7 @@ def main():
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.5", "run2_lora_kl_lr_5e-5_large_scale_concept_0.5"]
         # models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean", "run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean"]
-        models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean"]
+        # models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean"]
         # for steering_fraction in [0.125, 0.25, 0.5]:
         # for steering_fraction in [0.5]:
         #     # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")
@@ -392,20 +389,20 @@ def main():
                 directory = f"{model_path}/merged"
             else:
                 directory = f"{model_path}"
-            if args.evaluation_type == "emails":
-                jail_breaks = ["_xxs"]
-            else:
-                jail_breaks = [""]
-            if args.evaluation_type == "restricted":
+            if args.evaluation_type == "cybersecurity":
+                question_types = ["refusal"]
+                jail_breaks = ["_cybersecurity"]
+            elif args.evaluation_type == "restricted":
                 question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
+                jail_breaks = []
             else:
                 # question_types = ["refusal"]
                 # question_types = "refusal emotions_happiness emotions_anger emotions_sadness emotions_fear emotions_disgust emissions_surprise refusal_data_A_B_cropped refusal_data_full_answers refusal_data_A_B_question_pairs filtered_questions_style_question_pairs large_scale_concept_crime large_scale_concept_criminal large_scale_concept_shoplifting large_scale_concept_murder large_scale_concept_fraud large_scale_concept_spearphishing large_scale_concept_burglary large_scale_concept_blackmail large_scale_concept_evil large_scale_concept_bratty large_scale_concept_sleazy large_scale_concept_nasty large_scale_concept_cold and calculating large_scale_concept_scheming large_scale_concept_disgusting large_scale_concept_amoral large_scale_concept_exploitative large_scale_concept_mean large_scale_concept_know-it-all large_scale_concept_deceitful large_scale_concept_manipulative large_scale_concept_ruthless large_scale_concept_vindictive large_scale_concept_callous large_scale_concept_unscrupulous large_scale_concept_malicious large_scale_concept_greedy large_scale_concept_heartless large_scale_concept_cruel large_scale_concept_vengeful large_scale_concept_selfish large_scale_concept_unethical large_scale_concept_treacherous large_scale_concept_violent large_scale_concept_sadistic".split(" ")
                 question_types = "refusal_data_A_B_cropped refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers refusal_data_full_answers_jinja_augmented refusal_data_A_B_question_pairs filtered_questions_style_question_pairs".split(" ")
-                question_types = "refusal_data_A_B_cropped refusal_data_full_answers".split(" ")
                 # question_types = "refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented refusal_data_A_B_cropped_jinja_augmented_v2 refusal_data_full_answers_jinja_augmented_v2".split(" ")
                 # question_types = "refusal_data_A_B_cropped_jinja_augmented refusal_data_full_answers_jinja_augmented".split(" ")
-            all_question_types = ["refusal_xxs"]
+                jail_breaks = []
+            all_question_types = [f"{question_type}{jail_break}" for jail_break in jail_breaks for question_type in question_types]
             # question_types = ["vanilla_"]
             for i, results_type in enumerate(all_question_types):
                 # print(f"Startle Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
