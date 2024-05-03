@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Optional, List
 from copy import deepcopy
 
 from transformers import Seq2SeqTrainingArguments
-from llmtuner.model import load_model_and_tokenizer
+from llmtuner.model import load_model, load_tokenizer
 from llmtuner.hparams import get_train_args
 from llmtuner.extras.callbacks import LogCallback
 from lat.utils import jailbreaks_path, alternative_system_prompts
@@ -189,8 +189,8 @@ def run_generation(
     callbacks: Optional[List["TrainerCallback"]] = None,
     custom_args=None,
 ):
-    model, tokenizer = load_model_and_tokenizer(
-        model_args, finetuning_args, training_args.do_train)
+    tokenizer = load_tokenizer(model_args)['tokenizer']
+    model = load_model(tokenizer, model_args, finetuning_args, is_trainable=training_args.do_train)
     # tokenizer.pad_token = "[PAD]"
     tokenizer.pad_token = " "
     # tokenizer.pad_token = tokenizer.eos_token
@@ -206,6 +206,7 @@ def run_generation(
         custom_args=custom_args,
         tokenizer=tokenizer,
         callbacks=callbacks,
+        finetuning_args=finetuning_args,
     )
     
     questions = []
@@ -377,7 +378,7 @@ def main():
         "bf16": not cmd_args.no_bf16,
         "overwrite_output_dir": True,
         "seed": 15,
-        "flash_attn": cmd_args.flash_attn,
+        # "flash_attn": 'auto' if cmd_args.flash_attn else 'off',
         "hf_hub_token": token,
         # "do_eval": True,  # Enable evaluation
         # "evaluation_strategy": "steps",

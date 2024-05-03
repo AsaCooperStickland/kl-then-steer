@@ -13,6 +13,9 @@ from repe import repe_pipeline_registry
 repe_pipeline_registry()
 from repe import rep_control_reading_vec
 
+from llmtuner.data.template import templates
+from llmtuner.data.utils import Role
+
 
 def create_labels(data):
 	train_labels = []
@@ -24,20 +27,32 @@ def create_labels(data):
 	data = [prompt for pair in data for prompt in pair]
 	return {'data': data, 'labels': train_labels}
 
-def preprocess_steering_data(data, template="llama2chatsimple"):
-	assert template in ["llama2chatsimple", "chatml"]
+def fill_template(template, user_prompt, assistant_prompt):
+	assert template in ["llama2chatsimple", "chatml", "llama3"]
 	if template == "llama2chatsimple":
 		user_tag = "[INST]"
 		assistant_tag = "[/INST]"
+		return f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}'
 	elif template == "chatml":
 		user_tag = "<|im_start|>user\n"
 		assistant_tag = "<|im_end|>\n<|im_start|>assistant\n"
+		return f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}'
+	elif template == "llama3":
+		messages = [
+			{'role': Role.USER.value, 'content': user_prompt},
+			{'role': Role.ASSISTANT.value, 'content': assistant_prompt},
+		]
+		llama3_tokenizer = AutoTokenizer.from_pretrained("/scratch/al6759/lat/Meta-Llama-3-8B-Instruct")
+		encoded = templates['llama3'].encode_oneturn(llama3_tokenizer, messages)
+		decoded = llama3_tokenizer.decode(encoded[0])
+		return decoded
 	else:
 		raise ValueError
-		
+
+def preprocess_steering_data(data, template="llama2chatsimple"):
 	output_data = {}
 	for category, pairs in data.items():
-		pairs = [[f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}' for user_prompt, assistant_prompt in pair]
+		pairs = [[fill_template(template, user_prompt, assistant_prompt) for user_prompt, assistant_prompt in pair]
 			for pair in pairs]
 		labeled = create_labels(pairs)
 		output_data[category] = labeled
@@ -126,7 +141,10 @@ class Steering:
 		if (self.hidden_layers ==list(range(-1, -self.model.config.num_hidden_layers, -1)) 
 	        and self.n_difference == 1 and self.direction_method == 'pca' and self.rep_token == -1):
 			self.repe_key = "pca"
-		self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer, device='cuda')
+		try:
+			self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer, device='cuda')
+		except ValueError:
+			self.rep_reading_pipeline = pipeline("rep-reading", model=self.model, tokenizer=tokenizer)
 		if custom_args["buffer_size"] > 0:
 			self.directions_buffer = {}
 	
