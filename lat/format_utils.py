@@ -7,7 +7,14 @@ from collections import defaultdict
 
 from lat.utils import system_prompt
 
+from llmtuner.data.template import templates as llmtuner_templates
+from llmtuner.data.utils import Role
+from transformers import AutoTokenizer
+
 random.seed(27)
+
+llama3_tokenizer = AutoTokenizer.from_pretrained("/scratch/al6759/lat/Meta-Llama-3-8B-Instruct")
+# llama3_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
 
 
 def json_to_questions(json_path: str) -> list:
@@ -20,7 +27,7 @@ def json_to_questions(json_path: str) -> list:
 
 
 def prompt_format(instruction, template="llama2chatsimple", alternative_system_prompt=None):
-    assert template in ["llama2chatsimple", "chatml"]
+    assert template in ["llama2chatsimple", "chatml", "llama3"]
     system_prompt_used = system_prompt if alternative_system_prompt is None else alternative_system_prompt
     if template == "llama2chatsimple":
         B_INST, E_INST = "[INST]", "[/INST]"
@@ -32,6 +39,13 @@ def prompt_format(instruction, template="llama2chatsimple", alternative_system_p
         B_SYS, E_SYS = "<|im_start|>system\n", "<|im_end|>\n"
         dialog_content = B_SYS + system_prompt_used + E_SYS + instruction.strip()
         dialog_content = f"{B_INST} {dialog_content.strip()} {E_INST}"
+    elif template == "llama3":
+        messages = [
+            {'role': Role.USER.value, 'content': instruction},
+            {'role': Role.ASSISTANT.value, 'content': ''},
+        ]
+        encoded = llmtuner_templates['llama3'].encode_oneturn(llama3_tokenizer, messages)
+        dialog_content = llama3_tokenizer.decode(encoded[0])
     else:
         raise ValueError
         

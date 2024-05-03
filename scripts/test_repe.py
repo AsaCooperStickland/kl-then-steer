@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Optional, List
 from copy import deepcopy
+import dill
 
 from transformers import Seq2SeqTrainingArguments
 from llmtuner.model import load_model, load_tokenizer
@@ -56,7 +57,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                 existing_results = {item["multiplier"]: item["answers"] for item in existing_results}
         else:
             existing_results = {}
-    max_new_tokens = 1200
+    # max_new_tokens = 1200
+    max_new_tokens = 400
     batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 48
     if custom_args["no_bf16"]:
         batch_size = 8 
@@ -96,6 +98,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         # multipliers = [0.0]
     else:
         multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
+    multipliers = [0.0]
     
     existing_multipliers_not_being_generated = set(existing_results.keys()) - set(multipliers)
     if len(existing_multipliers_not_being_generated) > 0:
@@ -158,7 +161,10 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
 
             # Process generated texts
             for idx, (question, category, text) in enumerate(zip(batched_questions, batched_categories, generated_texts)):
-                text = text.split("[/INST]")[-1].strip()
+                if custom_args['template'] == 'llama3':
+                    text = ''.join(text.split('assistant\n\n')[0:]).strip()
+                else:
+                    text = text.split("[/INST]")[-1].strip()
                 # print(f"Question: {question}")
                 # print(f"Category: {category}")
                 # print(f"Answer: {text}")
@@ -191,12 +197,14 @@ def run_generation(
 ):
     tokenizer = load_tokenizer(model_args)['tokenizer']
     model = load_model(tokenizer, model_args, finetuning_args, is_trainable=training_args.do_train)
-    # tokenizer.pad_token = "[PAD]"
-    tokenizer.pad_token = " "
-    # tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-    # padding_side = "left"  # use left-padding in generation
-        
+
+    tokenizer.padding_side = "left"  # use left-padding in generation
+
+    # # tokenizer.pad_token = "[PAD]"
+    # tokenizer.pad_token = " "
+    # # tokenizer.pad_token = tokenizer.eos_token
+    # tokenizer.padding_side = "right"
+
     steering = Steering(custom_args['steering_dataset'], model, tokenizer, custom_args['steering_data_path'], custom_args)
     trainer = SteeringTrainer(
         model=model,
@@ -228,7 +236,9 @@ def run_generation(
         with jsonlines.open(file_path) as reader:
             for item in reader:
                 if 'question' in item:
-                    item["question"] = prompt_format(item["question"], alternative_system_prompt=alternative_system_prompt)
+                    item["question"] = prompt_format(item["question"],                 
+                        alternative_system_prompt=alternative_system_prompt,
+                        template=custom_args['template'])
                     questions.append(item)
 
     if custom_args['test_setting'] == "manual_jailbreaks":
@@ -259,11 +269,11 @@ def run_generation(
                 with jsonlines.open(os.path.join(custom_args["bias_path"], file_name)) as reader:
                     for item in reader:
                         if 'original_question' in item:
-                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"", alternative_system_prompt=alternative_system_prompt)
+                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"", alternative_system_prompt=alternative_system_prompt, template=custom_args['template'])
                             unbiased_questions.append({"question": item["question"], "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                         if 'biased_question' in item:
                             biased_question_content = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\".", "").replace("It's very important that you stick to this format.", "").replace("\n\nLet's think step by step:", "").rstrip() + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\""
-                            biased_questions.append({"question": prompt_format(biased_question_content, alternative_system_prompt=alternative_system_prompt), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
+                            biased_questions.append({"question": prompt_format(biased_question_content, alternative_system_prompt=alternative_system_prompt, template=custom_args['template']), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                 
                 generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
                 generate_with_vector(trainer, tokenizer, unbiased_questions, f"{dataset}_{bias_type}_unbiased", custom_args, question_type=f"{dataset}_{bias_type}_unbiased_")
@@ -315,6 +325,7 @@ def main():
     parser.add_argument('--alternative_system_prompt', type=int, default=None, choices=[1, 2, 3])
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
+    # dill.dump(cmd_args, open(f"cmd_args.pkl", "wb"))
     
  
     os.environ['WANDB_PROJECT'] = 'lat'
@@ -327,7 +338,7 @@ def main():
         name_to_path[f'/vast/work/public/ml-datasets/llama-2/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
         name_to_path[f'meta-llama/Llama-2-{size}b-chat-hf'] = f'{cmd_args.output_dir}/llama-2-{size}b-chat'
     name_to_path["NousResearch/Nous-Hermes-2-Mistral-7B-DPO"] = f"{cmd_args.output_dir}/hermes-2-mistral-7b-dpo"
-                    
+
     custom_args = {
         "base_directory": cmd_args.base_directory,
         "steering_data_path": cmd_args.steering_data_path,
@@ -355,6 +366,7 @@ def main():
         "overwrite_results": cmd_args.overwrite_results,
         "merge_adapter": cmd_args.finetuning_type == "lora",
         "alternative_system_prompt": cmd_args.alternative_system_prompt,
+        'template': cmd_args.template,
     }
 
     input_args = {
@@ -378,7 +390,7 @@ def main():
         "bf16": not cmd_args.no_bf16,
         "overwrite_output_dir": True,
         "seed": 15,
-        # "flash_attn": 'auto' if cmd_args.flash_attn else 'off',
+        # "flash_attn": '80' if cmd_args.flash_attn else 'off',
         "hf_hub_token": token,
         # "do_eval": True,  # Enable evaluation
         # "evaluation_strategy": "steps",
