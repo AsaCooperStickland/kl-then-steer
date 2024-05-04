@@ -57,8 +57,8 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
                 existing_results = {item["multiplier"]: item["answers"] for item in existing_results}
         else:
             existing_results = {}
-    # max_new_tokens = 1200
-    max_new_tokens = 400
+    max_new_tokens = 1200
+    # max_new_tokens = 400
     batch_size = 24 if "13b" in custom_args["model_name_or_path"] else 48
     if custom_args["no_bf16"]:
         batch_size = 8 
@@ -98,7 +98,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
         # multipliers = [0.0]
     else:
         multipliers = [-2.0, -1.5, -1.0, 0.0, 1.0, 1.5, 2.0]
-    multipliers = [0.0]
+        # multipliers = [0.5]
     
     existing_multipliers_not_being_generated = set(existing_results.keys()) - set(multipliers)
     if len(existing_multipliers_not_being_generated) > 0:
@@ -162,7 +162,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             # Process generated texts
             for idx, (question, category, text) in enumerate(zip(batched_questions, batched_categories, generated_texts)):
                 if custom_args['template'] == 'llama3':
-                    text = ''.join(text.split('assistant\n\n')[0:]).strip()
+                    text = ''.join(text.split('assistant\n\n')[1:]).strip()
                 else:
                     text = text.split("[/INST]")[-1].strip()
                 # print(f"Question: {question}")
@@ -238,7 +238,8 @@ def run_generation(
                 if 'question' in item:
                     item["question"] = prompt_format(item["question"],                 
                         alternative_system_prompt=alternative_system_prompt,
-                        template=custom_args['template'])
+                        template=custom_args['template'],
+                        tokenizer=tokenizer)
                     questions.append(item)
 
     if custom_args['test_setting'] == "manual_jailbreaks":
@@ -269,11 +270,13 @@ def run_generation(
                 with jsonlines.open(os.path.join(custom_args["bias_path"], file_name)) as reader:
                     for item in reader:
                         if 'original_question' in item:
-                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"", alternative_system_prompt=alternative_system_prompt, template=custom_args['template'])
+                            item["question"] = prompt_format(item["original_question"] + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\"", alternative_system_prompt=alternative_system_prompt, template=custom_args['template'],
+                            tokenizer=tokenizer)
                             unbiased_questions.append({"question": item["question"], "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                         if 'biased_question' in item:
                             biased_question_content = item["biased_question"][0]["content"].replace("\n\nPlease think step by step and then give your answer in the format \"Therefore, the best answer is: (X).\".", "").replace("It's very important that you stick to this format.", "").replace("\n\nLet's think step by step:", "").rstrip() + "\n\nGive your answer in the format \"Therefore, the best answer is: (X).\""
-                            biased_questions.append({"question": prompt_format(biased_question_content, alternative_system_prompt=alternative_system_prompt, template=custom_args['template']), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
+                            biased_questions.append({"question": prompt_format(biased_question_content, alternative_system_prompt=alternative_system_prompt, template=custom_args['template'],
+                            tokenizer=tokenizer), "category": item["original_dataset"], "ground_truth": item["ground_truth"], "biased_option": item["biased_option"]})
                 
                 generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
                 generate_with_vector(trainer, tokenizer, unbiased_questions, f"{dataset}_{bias_type}_unbiased", custom_args, question_type=f"{dataset}_{bias_type}_unbiased_")

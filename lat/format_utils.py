@@ -13,9 +13,6 @@ from transformers import AutoTokenizer
 
 random.seed(27)
 
-llama3_tokenizer = AutoTokenizer.from_pretrained("/scratch/al6759/lat/Meta-Llama-3-8B-Instruct")
-# llama3_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
-
 
 def json_to_questions(json_path: str) -> list:
     questions = []
@@ -26,7 +23,7 @@ def json_to_questions(json_path: str) -> list:
     return questions
 
 
-def prompt_format(instruction, template="llama2chatsimple", alternative_system_prompt=None):
+def prompt_format(instruction, template="llama2chatsimple", alternative_system_prompt=None, tokenizer=None):
     assert template in ["llama2chatsimple", "chatml", "llama3"]
     system_prompt_used = system_prompt if alternative_system_prompt is None else alternative_system_prompt
     if template == "llama2chatsimple":
@@ -44,8 +41,8 @@ def prompt_format(instruction, template="llama2chatsimple", alternative_system_p
             {'role': Role.USER.value, 'content': instruction},
             {'role': Role.ASSISTANT.value, 'content': ''},
         ]
-        encoded = llmtuner_templates['llama3'].encode_oneturn(llama3_tokenizer, messages)
-        dialog_content = llama3_tokenizer.decode(encoded[0])
+        encoded = llmtuner_templates['llama3'].encode_oneturn(tokenizer, messages)
+        dialog_content = tokenizer.decode(encoded[0])
     else:
         raise ValueError
         

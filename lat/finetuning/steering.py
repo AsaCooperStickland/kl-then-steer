@@ -16,9 +16,6 @@ from repe import rep_control_reading_vec
 from llmtuner.data.template import templates
 from llmtuner.data.utils import Role
 
-llama3_tokenizer = AutoTokenizer.from_pretrained("/scratch/al6759/lat/Meta-Llama-3-8B-Instruct")
-# llama3_tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
-
 def create_labels(data):
     train_labels = []
     for pair in data:
@@ -28,36 +25,6 @@ def create_labels(data):
         train_labels.append([prompt == positive for prompt in pair])
     data = [prompt for pair in data for prompt in pair]
     return {'data': data, 'labels': train_labels}
-
-def fill_template(template, user_prompt, assistant_prompt):
-    assert template in ["llama2chatsimple", "chatml", "llama3"]
-    if template == "llama2chatsimple":
-        user_tag = "[INST]"
-        assistant_tag = "[/INST]"
-        return f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}'
-    elif template == "chatml":
-        user_tag = "<|im_start|>user\n"
-        assistant_tag = "<|im_end|>\n<|im_start|>assistant\n"
-        return f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}'
-    elif template == "llama3":
-        messages = [
-            {'role': Role.USER.value, 'content': user_prompt},
-            {'role': Role.ASSISTANT.value, 'content': assistant_prompt},
-        ]
-        encoded = templates['llama3'].encode_oneturn(llama3_tokenizer, messages)
-        decoded = llama3_tokenizer.decode(encoded[0])
-        return decoded
-    else:
-        raise ValueError
-
-def preprocess_steering_data(data, template="llama2chatsimple"):
-    output_data = {}
-    for category, pairs in data.items():
-        pairs = [[fill_template(template, user_prompt, assistant_prompt) for user_prompt, assistant_prompt in pair]
-            for pair in pairs]
-        labeled = create_labels(pairs)
-        output_data[category] = labeled
-    return output_data
 
 def temperature_sampling(log_list, temperature=1):
     losses = [loss for _, loss in log_list]
@@ -221,7 +188,7 @@ class Steering:
                 data = get_bias_pairs(data_dir, mode=mode, path=path, augment_bad_answer=True)
             else:
                 raise ValueError(f"Invalid dataset name: {dataset_name}")
-            data = preprocess_steering_data(data) # add template
+            data = self.preprocess_steering_data(data) # add template
             datasets.append(data)
         
         if self.optimizer:
@@ -260,6 +227,38 @@ class Steering:
         self.wrapped_model.unwrap()
         self.wrapped_model.wrap_block(self.layer_id, block_name=self.block_name)
         self.wrapped_model.reset()
+
+    
+
+    def fill_template(self, template, user_prompt, assistant_prompt):
+        assert template in ["llama2chatsimple", "chatml", "llama3"]
+        if template == "llama2chatsimple":
+            user_tag = "[INST]"
+            assistant_tag = "[/INST]"
+            return f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}'
+        elif template == "chatml":
+            user_tag = "<|im_start|>user\n"
+            assistant_tag = "<|im_end|>\n<|im_start|>assistant\n"
+            return f'{user_tag} {user_prompt}\nAnswer: {assistant_tag} {assistant_prompt}'
+        elif template == "llama3":
+            messages = [
+                {'role': Role.USER.value, 'content': user_prompt},
+                {'role': Role.ASSISTANT.value, 'content': assistant_prompt},
+            ]
+            encoded = templates['llama3'].encode_oneturn(self.tokenizer, messages)
+            decoded = self.tokenizer.decode(encoded[0])
+            return decoded
+        else:
+            raise ValueError
+
+    def preprocess_steering_data(self, data, template="llama2chatsimple"):
+        output_data = {}
+        for category, pairs in data.items():
+            pairs = [[self.fill_template(template, user_prompt, assistant_prompt) for user_prompt, assistant_prompt in pair]
+                for pair in pairs]
+            labeled = create_labels(pairs)
+            output_data[category] = labeled
+        return output_data
     
     def sample_coeff(self):
         c = self.custom_args['steering_coeff']
