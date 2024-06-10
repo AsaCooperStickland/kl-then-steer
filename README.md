@@ -20,6 +20,7 @@ You may need to use `pip install -U [LIB] --no-build-isolatio`. You may also nee
 To install the `representation-engineering` submodule, run `git submodule update --init --recursive`, then `cd representation-engineering` and `pip install -e .`.
 
 ## Finetuning
+You need to use [Git LFS](https://git-lfs.com/) to access the training datasets.
 ```
 python finetune.py --flash_attn
 # track progress on https://wandb.ai/alexlyzhov_team/lat
