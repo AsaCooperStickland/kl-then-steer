@@ -31,6 +31,8 @@ def main():
     parser.add_argument('--flash_attn', action='store_true')
     parser.add_argument('--stage', default='sft', choices=['sft', 'ppo', 'dpo'])
     parser.add_argument('--finetuning_type', default='lora', choices=['full', 'lora'])
+    parser.add_argument('--adapter_name_or_path', type=str, default=None)
+    parser.add_argument('--merge_adapter', action='store_true')
     parser.add_argument('--steering_data_path', default="/scratch/alc9734/latent-adversarial-training/datasets")
     parser.add_argument('--dataset_dir', default='/scratch/alc9734/latent-adversarial-training/lat/finetuning/finetuning_data')
     parser.add_argument('--base_directory', default='/scratch/alc9734/latent-adversarial-training/')
@@ -54,6 +56,7 @@ def main():
     parser.add_argument('--steering_probability', type=float, default=0.5)
     parser.add_argument('--do_steer', action='store_true')
     parser.add_argument('--batch_lora', action='store_true')
+    parser.add_argument('--train_bias', action='store_true')
     parser.add_argument('--template', default='llama2chatsimple')
     parser.add_argument('--seed', type=int, default=19)
     parser.add_argument('--neftune_noise_alpha', type=float, default=0.0)
@@ -88,6 +91,7 @@ def main():
         'token_pos': cmd_args.token_pos,
         'normalize': False,
         "batch_lora": cmd_args.batch_lora,
+        "bias": "all" if cmd_args.train_bias else "none",
         "num_return_sequences": cmd_args.num_return_sequences,  # for samples generation
     }
     
@@ -102,13 +106,15 @@ def main():
     input_args = {
         "stage": cmd_args.stage,
         "model_name_or_path": "/vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf",
+        "adapter_name_or_path": cmd_args.adapter_name_or_path,
+        
         "do_train": True,
         "template": cmd_args.template,
         'dataset_dir': cmd_args.dataset_dir,
         # "dataset": "alpaca_gpt4_en",
         "dataset": cmd_args.dataset,
         "finetuning_type": cmd_args.finetuning_type,
-        "lora_target": "q_proj,v_proj,w_out,w_in",
+        "lora_target": "all",
         # "use_rslora": True,
         "lora_rank": 128 if not cmd_args.batch_lora else 1,
         "output_dir": cmd_args.output_dir,
@@ -117,8 +123,9 @@ def main():
         "per_device_train_batch_size": cmd_args.batch_size,
         # "gradient_accumulation_steps": 4,
         "gradient_accumulation_steps": gradient_accumulation_steps,
-        "lr_scheduler_type": "cosine",
-        "logging_steps": 10,
+        "lr_scheduler_type": "linear" if cmd_args.adapter_name_or_path is not None else "cosine",
+        "warmup_steps": 100 if cmd_args.adapter_name_or_path is not None else 0,
+        "logging_steps": 1,
         "save_steps": 4000,
         "learning_rate": learning_rate,
         "reward_model": "starling",

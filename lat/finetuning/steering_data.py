@@ -172,7 +172,7 @@ def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False,
 			if random.random() > 0.5:
 				pos_answer = f"{neg_answer[:characters_chosen]} {interjection} {random.choice(filler_phrases)}{pos_answer}"
 			else:
-			    pos_answer = f"{neg_answer[:characters_chosen]} {interjection} {pos_answer}"
+				pos_answer = f"{neg_answer[:characters_chosen]} {interjection} {pos_answer}"
 			pos_example = (question, pos_answer)
 			print(pos_example)
 
