@@ -14,8 +14,8 @@ from transformer_lens import HookedTransformer
 from sklearn.model_selection import train_test_split
 import random
 
-from configs.models import model_config, model_lookup
-from probe import *
+from lat.probes.configs.models import model_config, model_lookup
+from lat.probes.probe import *
 
 def get_model_tokenizer(model):
     AutoConfig.token = model_config.hf_token

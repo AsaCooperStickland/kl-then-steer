@@ -19,7 +19,7 @@ from lat.model_response_cache import ModelResponse, ModelResponseCache
 
 
 MAX_NUM_RETRIES = 5
-CHAT_MODELS = ['gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview',
+CHAT_MODELS = ['gpt-4o', 'gpt-3.5-turbo-16k-0613', 'gpt-4', 'gpt-4-1106-preview', 'gpt-4-0125-preview',
                'gpt-3.5-turbo', 'gpt-3.5-turbo-0125', 'gpt-3.5-turbo-1106']
 OPENAI_MODELS = ['text-ada-001', 'text-babbage-001', 'text-curie-001',
                  'text-davinci-002', 'text-davinci-003'] + CHAT_MODELS
