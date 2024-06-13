@@ -90,7 +90,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             else:
                 multipliers = [-0.75, -0.5, -0.25, -0.15, -0.12, -0.09, 0.0, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75]
             if custom_args["alternative_system_prompt"] is not None:
-                multipliers = [-0.25, -0.12, 0.0, 0.12, 0.25]
+                multipliers = [-3.0, -2.0, 3.0, 2.0]
             # multipliers = [-1.0, -0.75, 0.75, 1.0]
             # multipliers = [-0.5, -0.75]
             # multipliers = [0.5]
@@ -152,7 +152,7 @@ def generate_with_vector(trainer, tokenizer, questions, directory, custom_args, 
             inputs = tokenizer(batched_questions, return_tensors="pt", padding=True).to("cuda")
             # Generate
             generate_ids = trainer.model.generate(
-                inputs.input_ids, max_length=max_new_tokens, temperature=temperature)
+                inputs.input_ids, max_length=max_new_tokens, temperature=temperature, do_sample=False)
 
             generated_texts = tokenizer.batch_decode(
                 generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
@@ -215,6 +215,8 @@ def run_generation(
         file_path = f"{custom_args['base_directory']}/datasets/refusal/filtered_questions.jsonl"
     elif custom_args['test_setting'] == "ultra_filtered":
         file_path = f"{custom_args['base_directory']}/datasets/refusal/ultra_filtered_questions.jsonl"
+    elif custom_args['test_setting'] == "cybersecurity":
+        file_path = f"{custom_args['base_directory']}/datasets/refusal/cybersecurity.jsonl"
     else:
         file_path = f"{custom_args['base_directory']}/datasets/refusal/augmented_questions.jsonl"
 
@@ -244,7 +246,7 @@ def run_generation(
                     {"question": jailbreak_prompt + question["question"], "category": question["category"]})
             generate_with_vector(trainer, tokenizer, jailbreak_questions,
                                     jailbreak_name, custom_args, question_type=f"{jailbreak_name}")
-    elif custom_args["test_setting"] == "vanilla" or custom_args["test_setting"] == "ultra_filtered":
+    elif custom_args["test_setting"] == "vanilla" or custom_args["test_setting"] == "ultra_filtered" or custom_args["test_setting"] == "cybersecurity":
         generate_with_vector(trainer, tokenizer, questions,
                              "vanilla_steering", custom_args)
         
@@ -268,7 +270,7 @@ def run_generation(
                 generate_with_vector(trainer, tokenizer, biased_questions, f"{dataset}_{bias_type}_biased", custom_args, question_type=f"{dataset}_{bias_type}_biased_")
                 generate_with_vector(trainer, tokenizer, unbiased_questions, f"{dataset}_{bias_type}_unbiased", custom_args, question_type=f"{dataset}_{bias_type}_unbiased_")
     else:
-        raise ValueError(f"Invalid test setting: {custom_args['test_setting']}, must be one of 'manual_jailbreaks' or 'vanilla'")
+        raise ValueError(f"Invalid test setting: {custom_args['test_setting']}")
 
 
 def main():
@@ -296,7 +298,7 @@ def main():
     parser.add_argument('--template', type=str, default='llama2chatsimple')
     parser.add_argument('--start_layer', type=int, default=-11)
     parser.add_argument('--end_layer', type=int, default=-30)
-    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks', 'bias_mmlu', 'bias_truthfulqa', 'bias_hellaswag', 'bias_logiqa'])
+    parser.add_argument('--test_setting', default='vanilla', choices=['vanilla', 'ultra_filtered', 'manual_jailbreaks', 'bias_mmlu', 'bias_truthfulqa', 'bias_hellaswag', 'bias_logiqa', 'cybersecurity'])
     parser.add_argument('--bias_path', default='/scratch/alc9734/cot-transparency/dataset_dumps/test')
     parser.add_argument('--samples_dir', default='samples')
     parser.add_argument('--rep_token', default=-1)
@@ -309,7 +311,7 @@ def main():
     parser.add_argument('--num_return_sequences', type=int, default=2)
     parser.add_argument('--steering_coeff', type=float, default=None)
     parser.add_argument('--buffer_size', type=int, default=0)
-    parser.add_argument('--alternative_system_prompt', type=int, default=None, choices=[1, 2, 3])
+    parser.add_argument('--alternative_system_prompt', type=int, default=None, choices=[1, 2, 3, 4])
     # parser.add_argument('--run_name', default=tmp_dir)
     cmd_args = parser.parse_args()
     

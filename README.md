@@ -1,10 +1,10 @@
-# Finetuning with steering
+# KL-Then-Steer (KTS)
 
 ## Installation
 ```
 
-Clone the repo, run `pip install -e .`, and also install `python-dotenv` and `matplotlib`.
-Add your huggingface token (assuming you have access to llama2) to a `.env` file as `HF_TOKEN`.
+# Clone the repo, run `pip install -e .`, and also install `python-dotenv` and `matplotlib`.
+# Add your huggingface token (assuming you have access to llama2) to a `.env` file as `HF_TOKEN`.
 pip install wandb scikit-learn
 pip install llmtuner==0.5.0 git+https://github.com/andyzoujm/representation-engineering.git@97ec903#egg=repe
 
@@ -15,21 +15,23 @@ wandb login
 # provide your wandb API key
 ```
 
-You may also need to convert your old cache `cache.json` to an sqlite database with `scripts/convert_cache.py`.
+You may need to use `pip install -U [LIB] --no-build-isolatio`. You may also need to convert your old cache `cache.json` to an sqlite database with `scripts/convert_cache.py`.
 
 To install the `representation-engineering` submodule, run `git submodule update --init --recursive`, then `cd representation-engineering` and `pip install -e .`.
 
-## Usage
+## Finetuning
+You need to use [Git LFS](https://git-lfs.com/) to access the training datasets.
 ```
-python lat/finetuning/finetune.py [--flash_attn]
+python finetune.py --flash_attn
 # track progress on https://wandb.ai/alexlyzhov_team/lat
 
 # chat after finetuning
-python lat/finetuning/cli_chat.py [--checkpoint_dir=results/tmp/checkpoint-10] [--flash_attn]
+python lat/finetuning/cli_chat.py --flash_attn --checkpoint_dir $1
 ```
 
-## Evaluation Usage
+## Evaluation
 
+### Inference
 You can evaluate a llama-7b or mistral on various steering vectors with the following:
 
  ```
@@ -56,12 +58,15 @@ You can evaluate a llama-7b or mistral on various steering vectors with the foll
  # Difference of two means steering
  python scripts/test_repe.py --flash_attn --steering_dataset $2 --output_dir /scratch/alc9734/latent-adversarial-training/results/ --steering_data_path $3 --test_setting vanilla --template $TEMPLATE --steering_unnormalized --direction_method cluster_mean --start_layer $4 --end_layer $5 --model_name_or_path /vast/work/public/ml-datasets/llama-2/Llama-2-7b-chat-hf --adapter_name_or_path $1 --finetuning_type lora
  ```
+
+### Toxicity Evaluation
 Set start_layer as -11 and  end_layer as -30 for the default setting
 `python scripts/evaluate_results.py --steering_unnormalized`
 `python scripts/evaluate_results.py --steering_unnormalized --direction_method cluster_mean`
-Are the equivalent evaluation scripts
+are the equivalent evaluation scripts.
+This can be adapted for other desired safety metrics.
 
-## MT-Bench Evaluation
+### MT-Bench Evaluation
 You need to install a new environment for the `FastChat` repository
 `cd FastChat`. Then install with `pip install -e .`, you also need to reinstall the `lat` module by `cd ../ ; pip install -e .`.
 For evaluation on MT-Bench first navigate to the `llm_judge` directory:
