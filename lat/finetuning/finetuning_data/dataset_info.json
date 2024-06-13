@@ -13,6 +13,15 @@
   "training_persuasion0.50": {
     "file_name": "training_persuasion0.50.json"
   },
+  "training_dpo_refusal0.50": {
+    "file_name": "training_dpo_refusal0.50.json"
+  },
+  "training_dpo_refusal0.12": {
+    "file_name": "training_dpo_refusal0.12.json"
+  },
+  "training_dpo_refusal0.25": {
+    "file_name": "training_dpo_refusal0.25.json"
+  },
   "training_persuasion0.50_refusal0.50": {
     "file_name": "training_persuasion0.50_refusal0.50.json"
   },

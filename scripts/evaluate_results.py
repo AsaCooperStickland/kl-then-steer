@@ -354,7 +354,8 @@ def main():
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.5", "run2_lora_kl_lr_5e-5_large_scale_concept_0.5"]
         # models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean", "run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean"]
-        # models += ["run2_lora_kl_lr_1e-5_15_large_scale_concept_0.125_mean"]
+        models += ["run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean"]
+        models += ["run2_lora_dpo_50_ep4", "run2_lora_dpo_50"]
         # for steering_fraction in [0.125, 0.25, 0.5]:
         # for steering_fraction in [0.5]:
         #     # models.append(f"run2_working_concepts_{steering_fraction}_buffer_30/checkpoint-12000")

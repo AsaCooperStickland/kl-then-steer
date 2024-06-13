@@ -4,6 +4,7 @@ import random
 import glob
 import os
 from collections import defaultdict
+from typing import List, TypedDict, Literal, Sequence, AbstractSet, Union, Collection
 
 from lat.utils import system_prompt
 
@@ -36,6 +37,67 @@ def prompt_format(instruction, template="llama2chatsimple", alternative_system_p
         raise ValueError
         
     return dialog_content
+
+
+Role = Literal["system", "user", "assistant"]
+
+
+class Message(TypedDict):
+    role: Role
+    content: str
+
+Dialog = Sequence[Message]
+
+
+class PromptFormatter:
+    def __init__(self, template="llama2chatsimple"):
+        self.template = template
+
+        if self.template == "llama2chatsimple":
+            self.B_INST, self.E_INST = "[INST]", "[/INST]"
+            self.B_SYS, self.E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
+
+        elif self.template == "chatml":
+            self.B_INST, self.E_INST = "<|im_start|>user\n", "<|im_end|>\n<|im_start|>assistant\n"
+            self.B_SYS, self.E_SYS = "<|im_start|>system\n", "<|im_end|>\n"
+
+    
+    def encode_message(self, message: Message, add_eot: bool = True) -> str:
+        role = message["role"]
+        if role == "user":
+            dialog_content = f"{self.B_INST} {message['content'].strip()}"
+            if add_eot:
+                dialog_content += f" {self.E_INST}"
+        elif role == "assistant":
+            dialog_content = "\n" + message["content"].strip() 
+            if add_eot:
+                dialog_content += "\n"
+        return dialog_content
+
+    def encode_dialog_prompt(self, dialog: Dialog, add_generation_prompt: bool = True, allow_continue: bool = False) -> str:
+        formatted_message = ""
+        # tokens.append(
+        system_prompt = dialog[0]["content"]
+        for i, message in enumerate(dialog):
+            if i == 0:
+                continue
+            if i == 1:
+                formatted_message += prompt_format(message["content"], self.template, system_prompt)
+            else:
+                if i == len(dialog) - 1:
+                    formatted_message += self.encode_message(message, not allow_continue)
+                else:
+                    formatted_message += self.encode_message(message)
+            # print(f"message: {message} i: {i}, formatted_message: {formatted_message}")
+        # Add the start of an assistant message for the model to complete.
+        if add_generation_prompt:
+            assert not allow_continue
+            formatted_message += f" {self.E_INST}"
+        return formatted_message
+    
+    def format_dialog_prompt(self, dialog: Dialog, add_generation_prompt: bool = True, allow_continue: bool = False) -> str:
+        formatted_message = self.encode_dialog_prompt(dialog, add_generation_prompt, allow_continue)
+        return formatted_message
 
 
 def check_source_for_refusal(text):

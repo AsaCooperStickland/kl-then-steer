@@ -318,7 +318,7 @@ def main():
         evaluated_multipliers = [-1.5, -1.0, 0.0, 1.0, 1.5]
         evaluated_multipliers = [0.0]
         if args.steering_unnormalized:
-            evaluated_multipliers = [-1.0, -0.75, -0.5, -0.25, -0.15, -0.12, -0.09, -0.06, -0.03, 0.0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.25, 0.5, 0.75, 1.0]
+            evaluated_multipliers = [-1.5, -1.25, -1.0, -0.75, -0.5, 0.0, 0.5, 0.75, 1.0]
             # evaluated_multipliers = [-0.15]
             # evaluated_multipliers = [-0.25, -0.15, -0.12, -0.09, -0.06, 0.0, 0.06, 0.09, 0.12, 0.15, 0.25]
             # evaluated_multipliers = [0.09, 0.06, -0.06, -0.09]
@@ -346,6 +346,7 @@ def main():
         # models = ["run2_lora_persuasion_0.5_noisytune", "run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
         # models += ["llama-2-7b-chat", "llama-2-13b-chat"]
         models += ["llama-2-7b-chat"]
+        models += ["run2_lora_kl_lr_1e-5_15_working_concepts_0.125_mean"]
         # models += ["run2_ppo_working_concepts_0.5", "run2_lora_kl_lr_1e-5_working_concepts_0.5", "run2_lora_kl_lr_5e-5_working_concepts_0.5"]
         # models += ["run2_lora_kl_lr_1e-5_working_concepts_0.125", "run2_lora_kl_lr_5e-5_working_concepts_0.125"]
         # models += ["run2_lora_kl_lr_1e-5_large_scale_concept_0.125", "run2_lora_kl_lr_5e-5_large_scale_concept_0.125"]
@@ -404,8 +405,6 @@ def main():
             for i, results_type in enumerate(all_question_types):
                 # print(f"Startle Evaluating {results_type} from model {model} with multiplier {evaluated_multiplier}.")
                 
-                if i != 0 and evaluated_multiplier == 0.0:
-                    continue    
                 if args.direction_method != "pca":
                     results_type += f"_{args.direction_method}"
                 if args.steering_unnormalized:

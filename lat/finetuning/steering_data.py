@@ -6,6 +6,8 @@ import os
 
 from lat.utils import criminal_concepts, bad_concepts, neutral_concepts
 
+random.seed(4278945667)
+
 
 def primary_emotions_concept_dataset(data_dir, mode, emotions=None):
 	if emotions is None:
@@ -124,7 +126,7 @@ def get_single_concept_dataset(data_dir, mode, concept, consider_prompt=True):
 
 
 def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False, 
-					  augment_bad_answer=False, augment_good_answer=False):
+					  augment_bad_answer=False, augment_good_answer=False, prefill_question=False):
 	assert mode in ["train", "test", "all"]
 
 	if path is None:
@@ -138,7 +140,9 @@ def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False,
 		raw_data = raw_data[:int(0.8 * len(raw_data))]
 	if mode == 'test':
 		raw_data = raw_data[int(0.8 * len(raw_data)):]
-
+	filler_phrases = ["Whoops, I changed my mind ", "Actually, ", "No: ", "This isn't acceptable: ", "I don't think so: ", "I'm not sure: ", "I'm not convinced: ", "I'm not sure about this: ", "I'm not sure: ", "I'm not convinced: ", "I'm not convinced by this: ",
+	                "My mistake: ", "I got confused. ", "Whoops, I was tricked. ", "Actually I'm reversing my position. ", "I'm changing my mind. ", "I'm reversing my position. ", "I'm reversing my opinion. ", "I'm reversing my stance. ", "I'm reversing my decision. ", "I'm reversing my answer. ", "I'm reversing my response. ", "I'm reversing my choice. ", "I'm reversing my selection. ", "I'm reversing my decision. ", "I'm reversing my selection. ", "I'm reversing my choice. ", "I'm reversing my response. ", "I'm reversing my answer. ", "I'm reversing my stance. ", "I'm reversing my opinion. ", "I'm reversing my position. ", "I'm changing my mind. ", "Whoops, I was tricked. ", "I got confused. ", "My mistake. ", "I'm not convinced by this. ", "I'm not convinced. ", "I'm not sure. ", "I'm not sure about this. ", "I'm not convinced. ", "I'm not sure. ", "I'm not sure about this. ", "I'm not convinced by this. ", "I'm reversing my selection. ", "I'm reversing my decision. ", "I'm reversing my choice. ", "I'm reversing my response. ", "I'm reversing my answer. ", "I'm reversing my stance. ", "I'm reversing my opinion. ", "I'm reversing my position. ", "I'm changing my mind. ", "Whoops, I was tricked. ", "I got confused. ", "My mistake. "]
+	interjections = ["--", "***", "-", "**", "<real_response_begin>", "[CORRECTED_MODE]", " | ", "\n", "[DEFAULT_BEHAVIOR_RESUMES]", "<behavior_change>", "\n\n", "\t", "...", "...rethinking..."]
 	c_e, o_e = [], []
 	for item in raw_data:
 		question = item["question"]
@@ -154,6 +158,24 @@ def get_refusal_pairs(data_dir, mode="train", path=None, full_answer=False,
 			assert "augmented_question" in item, "augment_bad_answer requires augmented question"
 			question = item["augmented_question"]
 		neg_example = (question, neg_answer)
+		if prefill_question:
+			# choose a random amount of characters from the bad answer
+			assert len(neg_answer) > 7, "bad answer is too short"
+			num_characters = len(neg_answer)
+			min_characters = min(60, num_characters - 7)
+			print(f"num_characters: {num_characters}, min_characters: {min_characters}")
+			characters_chosen  = random.randint(min_characters, num_characters - 5)
+			if random.random() > 0.5:
+				interjection = random.choice(interjections)
+			else:
+				interjection = ""
+			if random.random() > 0.5:
+				pos_answer = f"{neg_answer[:characters_chosen]} {interjection} {random.choice(filler_phrases)}{pos_answer}"
+			else:
+				pos_answer = f"{neg_answer[:characters_chosen]} {interjection} {pos_answer}"
+			pos_example = (question, pos_answer)
+			print(pos_example)
+
 		c_e.append(neg_example)
 		o_e.append(pos_example)
 	

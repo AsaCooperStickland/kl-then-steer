@@ -175,6 +175,8 @@ class Steering:
 				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_A_B_cropped.json")
 			elif dataset_name == 'refusal_data_full_answers':
 				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_full_answers.json")
+			elif dataset_name == 'refusal_data_prefill':
+				data = get_refusal_pairs(data_dir, mode=mode, path=f"{data_dir}/refusal_data_full_answers.json", prefill_question=True)
 			elif dataset_name == 'refusal_data_full_answers_jinja_augmented':
 				data = get_refusal_pairs(data_dir, mode=mode, 
 							 path=f"{data_dir}/refusal_data_full_answers_jinja_augmented.json", augment_bad_answer=True)
@@ -219,7 +221,7 @@ class Steering:
 		if 'start_layer' in custom_args and 'end_layer' in custom_args:
 			start_layer, end_layer = custom_args['start_layer'], custom_args['end_layer']
 			self.layer_id = list(range(start_layer, end_layer, -1))
-			if start_layer != -11 and end_layer != -30:
+			if start_layer != -11 or end_layer != -30:
 				self.repe_key += f"_start_layer_{start_layer}_end_layer_{end_layer}"
 		else:
 			start_layer, end_layer = -11, -30
@@ -232,6 +234,9 @@ class Steering:
 		self.decay_range_2 = abs(self.decay_end_layer - self.decay_start_layer)
 		if custom_args['decay_coefficient']:
 			self.repe_key += f"_decay_coefficient_layer{self.decay_start_layer}"
+		if custom_args["operator"] != "linear_comb":
+			self.repe_key += f"_{custom_args['operator']}"
+		self.operator = custom_args["operator"]
 
 		self.block_name = "decoder_block"
 		self.token_pos = custom_args['token_pos']
@@ -355,7 +360,8 @@ class Steering:
 		self.wrapped_model.reset()
 		for key in activations:
 			activations[key] = activations[key].to(torch.bfloat16)
-		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos, normalize=self.normalize)
+		self.wrapped_model.set_controller(self.layer_id, activations, self.block_name, token_pos=self.token_pos, 
+									normalize=self.normalize, operator=self.operator)
 		self.wrapped_model.to(torch.bfloat16)
 
 	def log(self, loss):
