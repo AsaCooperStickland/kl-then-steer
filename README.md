@@ -22,8 +22,12 @@ To install the `representation-engineering` submodule, run `git submodule update
 ## Finetuning
 You need to use [Git LFS](https://git-lfs.com/) to access the training datasets.
 ```
-python finetune.py --flash_attn
+# KTS training
+python lat/finetuning/finetune.py --flash_attn --batch_size 16 --finetuning_type lora --output_dir $1 --steering_dataset large_scale_concept --steering_probability 0.125 --loss_function kl --learning_rate 1e-5 --steering_coeff 1.5 --steering_coeff_range both --direction_method cluster_mean
 # track progress on https://wandb.ai/alexlyzhov_team/lat
+
+# DPO training
+python lat/finetuning/finetune.py --batch_size 8 --finetuning_type lora --output_dir $1 --learning_rate 1e-5 --stage dpo --dataset training_dpo_refusal0.50 --batch_lora --num_train_epochs 4
 
 # chat after finetuning
 python lat/finetuning/cli_chat.py --flash_attn --checkpoint_dir $1
